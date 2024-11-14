@@ -1,0 +1,457 @@
+ *******************************************************************************
+ *                                                                             *
+ *                                 SCALE 6.2.4                                 *
+ *                                -------------                                *
+ *                                November 2024                                *
+ *                                                                             *
+ *           SCALE:  A Comprehensive Modeling and Simulation Suite             *
+ *                   for Nuclear Safety Analysis and Design                    *
+ *                                                                             *
+ *                      Reactor and Nuclear Systems Division                   *
+ *                        Oak Ridge National Laboratory                        *
+ *                                                                             *
+ *                           http://scale.ornl.gov                             *
+ *                            scalehelp@ornl.gov                               *
+ *                                                                             *
+ *******************************************************************************
+ *******************************************************************************
+      
+                  Job Information
+                  ---------------
+      Job started on LAPTOP-CIORRL13 on Thu 14/11/2024 14:09:28
+      Working directory: C:\Users\Jonathon\AppData\Local\Temp\scale.Jonathon.12092
+      Input file name  : \\wsl$\Ubuntu-20.04\home\moosetools\projects\SCALETools\SCALESlice\tests\cylinder_in_a_box\cylinder_in_a_box.inp
+      Output file name : \\wsl$\Ubuntu-20.04\home\moosetools\projects\SCALETools\SCALESlice\tests\cylinder_in_a_box\cylinder_in_a_box.out
+      SCALE executable : C:\SCALE-6.2.4/bin/scale
+      
+ *******************************************************************************
+
+
+    module mavric will be called on Thu Nov 14 14:09:28 2024.
+    sequence specification record:=mavric parm=adjoint
+Input Data:
+
+      Sample dose, 500000.0 g, at x=30.0 cm
+      v7.1-28n19g
+      
+      read parameters
+          randomSeed=0000000100000001
+          ceLibrary="ce_v7.1_endf.xml"
+          neutrons  photons
+          fissionMult=1  secondaryMult=1
+          perBatch=15000 batches=20
+      end parameters
+      
+      read comp
+      f-19 1  0 19 873 end
+      f-19 10 0 19 873 end
+      u-235 1  0 235 873 end
+      f-19 11 0 19 873 end
+      f-19 12 0 19 873 end
+      end comp
+      
+      read geometry
+      global unit 1
+          cylinder 1 32.097577883979504 2p 32.097577883979504
+          media 1 1 1
+      
+          cylinder 2 34.6375778839795 2p 34.6375778839795
+          media 10  1 -1 2
+          cylinder 3 39.7175778839795 2p 39.7175778839795
+          media 11  1 -2 3
+          cylinder 4 65.1175778839795 2p 65.1175778839795
+          media 12  1 -3 4
+          cuboid 99999  6p 75.1175778839795
+          media 0 1 99999 -4
+      boundary 99999
+      end geometry
+      
+      read definitions
+      '     location 1
+      '        position 65.6175778839795 0 0
+      '    end location
+          gridGeometry 1
+              title='Adjoint Source Mesh, 10 cm voxels'
+              xLinear 15 -75.2 75.2
+              yLinear 15 -75.2 75.2
+              zLinear 15 -75.2 75.2
+          end gridGeometry
+      
+          gridGeometry 2
+              title="Mesh to determine fluxes/dose rates over limited tank space, 10 cm voxels"
+              xLinear 15 -75.2 75.2
+              yLinear 15 -75.2 75.2
+              zLinear 15 -75.2 75.2
+          end gridGeometry
+      
+      response 1
+          title="ANSI 6.1.1-2020 Effective Dose/Neutron Fluence"
+          neutron
+          bounds
+              1.00E-03    1.00E-02    2.50E-02    1.00E-01    2.00E-01    5.00E-01    1.00E+00    2.00E+00    5.00E+00    1.00E+01
+              2.00E+01    5.00E+01    1.00E+02    2.00E+02    5.00E+02    1.00E+03    2.00E+03    5.00E+03    1.00E+04    2.00E+04
+              3.00E+04    5.00E+04    7.00E+04    1.00E+05    1.50E+05    2.00E+05    3.00E+05    5.00E+05    7.00E+05    9.00E+05
+              1.00E+06    1.20E+06    1.50E+06    2.00E+06    3.00E+06    4.00E+06    5.00E+06    6.00E+06    7.00E+06    8.00E+06
+              9.00E+06    1.00E+07    1.20E+07    1.40E+07    1.50E+07    1.60E+07	1.80E+07    2.00E+07    2.10E+07    3.00E+07
+              5.00E+07	7.50E+07    1.00E+08    1.30E+08    1.50E+08    1.80E+08	2.00E+08    3.00E+08    4.00E+08    5.00E+08
+              6.00E+08	7.00E+08    8.00E+08    9.00E+08    1.00E+09    2.00E+09	5.00E+09    1.00E+10    end
+          values
+              3.09        3.55        4.0         5.2         5.87        6.59        7.03        7.39         7.71       7.82
+              7.84        7.82        7.79        7.73        7.54        7.54        7.61        7.97         9.11       12.2
+             15.7        23.0        30.6        41.9        60.6        78.8       114.0       177.0        232.0       279.0
+            301.0       330.0       365.0       407.0       458.0	      483.0       494.0       498.0        499.0       499.0
+            500.0       500.0       499.0       495.0       493.0       490.0       484.0       477.0        474.0       453.0
+            433.0       420.0       402.0       382.0       373.0       363.0       359.0       363.0        389.0       422.0
+            457.0       486.0       508.0       524.0       537.0	      612.0       716.0       933.0        end
+      '   pSv/s conversion to mrem/hr
+          multiplier=.00036
+      end response
+      
+      response 2
+          title="ANSI 6.1.1-2020 Effective Dose/Photon Fluence"
+          photon
+          bounds
+              1.00E+04    1.50E+04    2.00E+04    3.00E+04    4.00E+04    5.00E+04    6.00E+04    7.00E+04    8.00E+04    1.00E+05
+              1.50E+05	2.00E+05    3.00E+05    4.00E+05    5.00E+05    5.11E+05	6.00E+05    6.62E+05    8.00E+05    1.00E+06
+              1.17E+06	1.33E+06    1.50E+06    2.00E+06    3.00E+06    4.00E+06	5.00E+06    6.00E+06    6.13E+06    8.00E+06
+              1.00E+07	1.50E+07    2.00E+07    3.00E+07    4.00E+07    5.00E+07	6.00E+07    8.00E+07    1.00E+08    1.50E+08
+              2.00E+08	3.00E+08    4.00E+08    5.00E+08    6.00E+08    8.00E+08	1.00E+09    1.50E+09    2.00E+09    3.00E+09
+              4.00E+09	5.00E+09    6.00E+09    8.00E+09    1.00E+10    end
+          values
+              0.0685      0.156       0.225       0.312       0.35        0.369       0.389       0.411       0.443       0.518
+              0.747       1.0         1.51        2.0         2.47        2.52        2.91        3.17        3.73        4.49
+              4.9         5.6         6.12        7.48        9.75       11.7        13.4        15.0        15.1        17.8
+             20.5        26.1        30.8        37.9        43.2        47.1        50.1        54.5        57.8        63.2
+             67.2        72.3        75.4        77.4        78.7        80.4        81.6        83.7        85.0        86.6
+             87.8        88.6        89.1        89.9        90.4        end
+      '   pSv/s conversion to mrem/hr
+          multiplier=.00036
+      'From ANSI/ANS-6.1.1-2020 American National Standard Photon and Neutron Fluence-to-Dose Conversion Coefficients
+      end response
+      
+          distribution 1
+              title="Decayed sample after 0.006944444444444445 days, neutrons"
+              special="origensBinaryConcentrationFile"
+              parameters 18 1 end
+              filename="HC5.f71"
+          end distribution
+          distribution 2
+              title="Decayed sample after 0.006944444444444445 days, photons"
+              special="origensBinaryConcentrationFile"
+              parameters 18 5 end
+              filename="HC5.f71"
+          end distribution
+      
+      '    gridGeometry 1
+      '        title="Grid over the problem"
+      '        xLinear 5 -75.1175778839795 75.1175778839795
+      '        yLinear 5 -75.1175778839795 75.1175778839795
+      '        zLinear 5 -75.1175778839795 75.1175778839795
+      '        xLinear 8 -32.097577883979504 32.097577883979504
+      '        yLinear 8 -32.097577883979504 32.097577883979504
+      '        zLinear 8 -32.097577883979504 32.097577883979504
+      '        xPlanes  34.63758 -34.63758  39.71758 -39.71758  65.11758 -65.11758 end
+      '    end gridGeometry
+      end definitions
+      
+      read sources
+          src 1
+              title="Sample neutrons"
+              neutron
+              useNormConst
+              cylinder 32.097577883979504 32.097577883979504 -32.097577883979504
+              eDistributionID=1
+          end src
+          src 2
+              title="Sample photons"
+              photon
+              useNormConst
+              cylinder 32.097577883979504 32.097577883979504 -32.097577883979504
+              eDistributionID=2
+          end src
+      end sources
+      
+      'read importanceMap
+      '   gridGeometryID=1
+      ''   adjointFluxes="my_dose.adjoint.dff"
+      '   adjointSource 1
+      '        locationID=1
+      '        responseID=1
+      '   end adjointSource
+      '   adjointSource 2
+      '        locationID=1
+      '        responseID=2
+      '   end adjointSource
+      'end importanceMap
+      
+      read importancemap
+          gridGeometryID=1
+          adjointSource 1
+              boundingbox=75.2 -75.2 75.2 -75.2 75.2 -75.2
+              responseids=1 2 end
+          end adjointSource
+      respweighting
+      end importancemap
+      
+      read tallies
+      '    pointDetector 1
+      '        title="neutron detector"
+      '        neutron
+      '        locationID=1
+      '        responseID=1
+      '    end pointDetector
+      '    pointDetector 2
+      '        title="photon detector"
+      '        photon
+      '        locationID=1
+      '        responseID=2
+      '    end pointDetector
+      
+          meshTally 1
+              title="Neutron dose"
+              neutron
+      '        energyBoundsID=1
+              gridGeometryID=2
+              responseID=1
+          end meshTally
+          meshTally 2
+              title="Photon dose"
+              photon
+      '        energyBoundsID=1
+              gridGeometryID=2
+              responseID=2
+          end meshTally
+      
+      end tallies
+      
+      end data
+end
+
+
+
+
+************************************************************************************************************************************
+************************************************************************************************************************************
+************************************************************************************************************************************
+*****                                                                                                                          *****
+*****                                             program verification information                                             *****
+*****                                                                                                                          *****
+*****                                           code system: SCALE   version: 6.2.0                                            *****
+*****                                                                                                                          *****
+************************************************************************************************************************************
+************************************************************************************************************************************
+*****                                                                                                                          *****
+*****                                                                                                                          *****
+*****                      program:  mavric                                                                                    *****
+*****                                                                                                                          *****
+*****                      version:  6.2.4 (602004)                                                                            *****
+*****                                                                                                                          *****
+*****                     username:  Jonathon                                                                                  *****
+*****                                                                                                                          *****
+*****                     hostname:  LAPTOP-CIORRL13                                                                           *****
+*****                                                                                                                          *****
+*****                                                                                                                          *****
+*****            date of execution:  2024-11-14                                                                                *****
+*****                                                                                                                          *****
+*****            time of execution:  14:09:28                                                                                  *****
+*****                                                                                                                          *****
+************************************************************************************************************************************
+************************************************************************************************************************************
+************************************************************************************************************************************
+
+
+
+No cell data found in input.
+------------------------------------------------------------------------------------
+ Mixture table for component comps at line:13, column:1
+------------------------------------------------------------------------------------
+Mixture = 1 with density(g/cc) = 92319.7990 and temperature(K) = 873.00
+        Entry      Mixture      Nuclide     Density (atoms/b-cm)     Temperature (K)
+------------------------------------------------------------------------------------
+            1            1         9019            1.900000e+001              873.00
+            2            1        92235            2.350000e+002              873.00
+------------------------------------------------------------------------------------
+Mixture = 10 with density(g/cc) = 599.4040 and temperature(K) = 873.00
+        Entry      Mixture      Nuclide     Density (atoms/b-cm)     Temperature (K)
+------------------------------------------------------------------------------------
+            3           10         9019            1.900000e+001              873.00
+------------------------------------------------------------------------------------
+Mixture = 11 with density(g/cc) = 599.4040 and temperature(K) = 873.00
+        Entry      Mixture      Nuclide     Density (atoms/b-cm)     Temperature (K)
+------------------------------------------------------------------------------------
+            4           11         9019            1.900000e+001              873.00
+------------------------------------------------------------------------------------
+Mixture = 12 with density(g/cc) = 599.4040 and temperature(K) = 873.00
+        Entry      Mixture      Nuclide     Density (atoms/b-cm)     Temperature (K)
+------------------------------------------------------------------------------------
+            5           12         9019            1.900000e+001              873.00
+------------------------------------------------------------------------------------
+        Entry      Mixture      Nuclide     Density (atoms/b-cm)     Temperature (K)
+------------------------------------------------------------------------------------
+ End of mixture table for component comps at line:13, column:1
+------------------------------------------------------------------------------------
+
+Mavric built mixture pool in: 0.05 seconds.
+Mavric built celldata pool in: 0.00 seconds.
+Loaded MG Library: C:/SCALE-6.2.4/data\scale.rev12.xn28g19v7.1
+Mavric loaded ampx library in: 0.49 seconds.
+
+----------------------------------------------------------------------------------------------------
+ Cross section processing summary of the cells: 
+----------------------------------------------------------------------------------------------------
+
+ Total 4 cells are being processed:
+
+      3 *default cells* (non-fissionable) processed with BONAMI.
+      1 *default cells* (fissionable) processed with BONAMI (sequence default option).
+
+ NOTE: *default cells* are the cells not specified in CELLDATA block (They are processed as
+       infinite homogeneous cells).
+
+----------------------------------------------------------------------------------------------------
+
+Mavric prepared 4 unit cells in 0.03 seconds.
+Mavric wrote mixing table to mixturePool.dat in 0.00 seconds.
+XSProc starting module Dancoff.
+
+ Dancoff Module Problem Description
+ ige--geometry type(0/1/2/3--inf med/slab/cyl/sphere)                         0
+ izm--number of zones or material regions                                     1
+ igo--celltype                                                                1
+ ibr--right boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+ ibl--left  boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+XSProc execution of module Dancoff completed.
+XSProc starting module Bonami.
+XSProc execution of module Bonami completed.
+XSProc starting module MixMacros.
+XSProc execution of module MixMacros completed.
+XSProc starting module Dancoff.
+
+ Dancoff Module Problem Description
+ ige--geometry type(0/1/2/3--inf med/slab/cyl/sphere)                         0
+ izm--number of zones or material regions                                     1
+ igo--celltype                                                                1
+ ibr--right boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+ ibl--left  boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+XSProc execution of module Dancoff completed.
+XSProc starting module Bonami.
+XSProc execution of module Bonami completed.
+XSProc starting module MixMacros.
+XSProc execution of module MixMacros completed.
+XSProc starting module Dancoff.
+
+ Dancoff Module Problem Description
+ ige--geometry type(0/1/2/3--inf med/slab/cyl/sphere)                         0
+ izm--number of zones or material regions                                     1
+ igo--celltype                                                                1
+ ibr--right boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+ ibl--left  boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+XSProc execution of module Dancoff completed.
+XSProc starting module Bonami.
+XSProc execution of module Bonami completed.
+XSProc starting module MixMacros.
+XSProc execution of module MixMacros completed.
+XSProc starting module Dancoff.
+
+ Dancoff Module Problem Description
+ ige--geometry type(0/1/2/3--inf med/slab/cyl/sphere)                         0
+ izm--number of zones or material regions                                     1
+ igo--celltype                                                                1
+ ibr--right boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+ ibl--left  boundary condition (0/1/2/3--vacuum/reflected/periodic/white)     0
+XSProc execution of module Dancoff completed.
+XSProc starting module Bonami.
+XSProc execution of module Bonami completed.
+XSProc starting module MixMacros.
+XSProc execution of module MixMacros completed.
+Mavric executed XSProc with 4 unit cells in 0.03 seconds.
+
+
+
+ MAVRIC, part  1, reading/checking detailed input                             
+ *******************************************************************************
+
+
+ '     location 1
+
+ '        position 65.6175778839795 0 0
+
+ '    end location
+
+ '   pSv/s conversion to mrem/hr
+
+ '   pSv/s conversion to mrem/hr
+
+ 'From ANSI/ANS-6.1.1-2020 American National Standard Photon and Neutron Fluence-to-Dose Conversion Coefficients
+
+ '    gridGeometry 1
+
+ '        title="Grid over the problem"
+
+ '        xLinear 5 -75.1175778839795 75.1175778839795
+
+ '        yLinear 5 -75.1175778839795 75.1175778839795
+
+ '        zLinear 5 -75.1175778839795 75.1175778839795
+
+ '        xLinear 8 -32.097577883979504 32.097577883979504
+
+ '        yLinear 8 -32.097577883979504 32.097577883979504
+
+ '        zLinear 8 -32.097577883979504 32.097577883979504
+
+ '        xPlanes  34.63758 -34.63758  39.71758 -39.71758  65.11758 -65.11758 end
+
+ '    end gridGeometry
+
+ '    pointDetector 1
+
+ '        title="neutron detector"
+
+ '        neutron
+
+ '        locationID=1
+
+ '        responseID=1
+
+ '    end pointDetector
+
+ '    pointDetector 2
+
+ '        title="photon detector"
+
+ '        photon
+
+ '        locationID=1
+
+ '        responseID=2
+
+ '    end pointDetector
+
+ '        energyBoundsID=1
+
+ '        energyBoundsID=1
+ Calling jomchk ...
+    ... done with jomchk
+
+
+
+ *******************************************************************************
+ * Sequence Input Check Routine 1                                              *
+ *     Warnings and Errors                                                     *
+ *******************************************************************************
+ Warnings (1):
+    Denovo cannot accurately model fission when it is run in fixed source mode
+
+ Errors (2):
+    distribution 1: cannot open/read HC5.f71
+    distribution 2: cannot open/read HC5.f71
+ *******************************************************************************
+This problem will not be run because errors were detected in reading the input.
+
+    SCALE is finished on Thu Nov 14 14:09:29 2024.
+-------------------------- Summary --------------------------
+mavric finished. used 0.700786 seconds.
+SCALE driver required a maximum of 21.07 MiB of RAM.
+------------------------ End Summary ------------------------
+
