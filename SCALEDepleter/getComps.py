@@ -156,12 +156,19 @@ def get_comps_from_std_mix_file(filename):
 
 def split_isotope(isotope):
   match = re.match(r"([a-zA-Z]+)(\d+)", isotope)
-  if match:
+  if '-' in isotope:
+    return -1, -1, isotope
+  elif match:
     letters = match.group(1)  # Extract the letters
     numbers = match.group(2)  # Extract the numbers
     return letters, numbers, letters+'-'+numbers
   else:
-    raise ValueError(f"Invalid isotope format: {isotope}")
+    letters = match.group(1)  # Extract the letters
+    numbers = match.group(2)  # Extract the numbers
+    print(letters)
+    print(numbers)
+    print(isotope)
+    raise ValueError(f"Invalid isotope format: {isotope} {letters} {numbers}")
 
 def makeNewAddnuxDict(zeromatdict, tmpdir, addnuxdict):
   extraAddnuxIsotopes = []
@@ -187,6 +194,6 @@ def makeNewAddnuxDict(zeromatdict, tmpdir, addnuxdict):
   for iso in extraAddnuxIsotopes:
     userAddNuxDict.write(iso+'\n')
   userAddNuxDict.close()
-  addnuxdict = userAddNuxDict # set equals for use later - new addnuxdict is now in the temp directory. under tmpdir+'/usraddnuxdict.dict'
+  addnuxdict = tmpdir+'/usraddnuxdict.dict' # set equals for use later - new addnuxdict is now in the temp directory. under tmpdir+'/usraddnuxdict.dict'
 
   return addnuxdict

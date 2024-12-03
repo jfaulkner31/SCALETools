@@ -82,7 +82,7 @@ def makeOrigenFile(origen_base, fiss_mat_id, f33_label, step_num, steplength_day
     if 'POWER VECTOR' in line:
       POWER_VECTOR = specific_power * np.ones(len(TIME_VECTOR))
       line = '  power=' + str(POWER_VECTOR) + ' %MW '
-    if 'ISOTOPES_FROM_MATS' in line: # this one is only done for Step 0 -> gets comps from the MC file. at tstep > 0, we get comps from previous origen EOS
+    if 'ISOTOPES_FROM_MATS' in line: # this one is only done for Step 0 -> gets comps from the triton stdcmp file. at tstep > 0, we get comps from previous origen EOS f71 file
       mats_file = 'STD_CMP_'+str(fiss_mat_id)+'_'+predictor_corrector_string+'_step'+str(step_num)
       mat = getComps.get_comps_from_std_mix_file(mats_file)
       line = mat.make_origen_materials()

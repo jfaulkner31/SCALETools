@@ -51,8 +51,8 @@ printf " +--------------------------------------------------------------------+ 
 
 
 # Check if all four arguments are passed
-if [ "$#" -ne 4 ]; then
-  echo "Usage: $0 <materialNumber> <temperature> <filename> <dictionaryFilename>"
+if [ "$#" -ne 5 ]; then
+  echo "Usage: $0 <materialNumber> <temperature> <filename> <dictionaryFilename> <outputFilename>"
   exit 1
 fi
 
@@ -61,6 +61,7 @@ materialNumber=$1
 temperature=$2
 filename=$3
 dictionaryFilename=$4
+outputFilename=$5
 
 # Function to load the dictionary into an array
 load_dictionary() {
@@ -103,6 +104,8 @@ grab_data() {
 # Load and trim the dictionary
 load_dictionary "$dictionaryFilename"
 
+echo STARTING LINE
+echo "' material number $materialNumber in the stdcmp format with filename $outputFilename" >> $outputFilename
 # Process the output of the function and format the result
 grab_data "$filename" | while IFS=, read -r nuclide atomdensity; do
   # Trim spaces from nuclide and atomdensity
@@ -112,5 +115,7 @@ grab_data "$filename" | while IFS=, read -r nuclide atomdensity; do
   # Check if the nuclide is in the dictionary
   if is_in_dictionary "$nuclide"; then
     echo "${nuclide} $materialNumber 0 ${atomdensity} $temperature end"
+    echo "${nuclide} $materialNumber 0 ${atomdensity} $temperature end" >> $outputFilename
   fi
 done
+echo ENDING LINE

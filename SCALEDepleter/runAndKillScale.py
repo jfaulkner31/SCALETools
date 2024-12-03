@@ -38,6 +38,11 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
         if "ORIGEN multi-zone depletion global step 1" in line:
           terminate_process = True
           print("Termination of process detected", flush=True)
+        if "Output is stored in" in line:
+          os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+          process.wait() # garbage collection for subprocess to finish killing
+          print("Process terminated after", time.time()-start_time, "seconds.", flush=True)
+          raise Exception("SCALE job finished - terminate python script")
 
       time.sleep(1) # sleep for 1 seconds to
 
@@ -46,7 +51,7 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
     print("Manual interruption received.")
 
   # Step 3: Kill the process
-  time.sleep(20) # sleep for 20 seconds to let things finish writing/copying
+  time.sleep(6) # sleep for 20 seconds to let things finish writing/copying
   os.killpg(os.getpgid(process.pid), signal.SIGTERM)
   process.wait() # garbage collection for subprocess to finish killing
   print("Process terminated after", time.time()-start_time, "seconds.", flush=True)
