@@ -179,7 +179,7 @@ def makeNewAddnuxDict(zeromatdict, tmpdir, addnuxdict):
   addnuxList = []
   for line in lines:
     line = line.replace("\n", "")
-    if line not in extraAddnuxIsotopes:
+    if (line not in extraAddnuxIsotopes) & (len(line) > 0):
       extraAddnuxIsotopes.append(line)
 
   # now make new file for addnuxdict and write to it
