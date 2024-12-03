@@ -1,0 +1,44 @@
+=origen
+solver{
+  type=CRAM
+}
+case{
+  title="CASE_TITLE"
+  lib{
+    file="F33_FILE"
+    pos=F33_POS_INT
+  }
+
+% time def
+  time{
+    units=DAYS
+    t=[TIME_VECTOR]
+  }
+
+% power def
+  power=[POWER VECTOR] %MW
+
+% materials def
+  mat{
+    units=ATOMS-PER-BARN-CM
+    iso=[ISOTOPES_FROM_MATS]
+  }
+
+% printing some stuff
+  print{
+    rel_cutoff=no
+    cutoffs[ALL=1e-20]
+    nuc{
+      units=[ATOMS-PER-BARN-CM]
+      sublibs=[ALL]
+      total=yes
+    }
+  }
+
+% saving some stuff
+  save{
+    file="EOS_OUTPUT_F71_FILE"
+    steps=[LAST]
+  }
+} %end case
+end

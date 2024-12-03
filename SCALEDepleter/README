@@ -1,0 +1,19 @@
+A quick little set of methods for SCALE depletion - avoids using built in TRITON process.
+
+
+HOW IT WORKS
+
+1 - Runs TRITON for 1 step and kills it afterwards.
+2 - Does a predictor step in ORIGEN to t+dt using fluxes, power defs, and the f33 from the first step.
+3 - Runs TRITON at t+dt with the new nuclide vector from the EOS at Step 2 - again kills after completing step 0.
+4 - Corrector method in Origen using modified f33
+
+BASE FILES
+f71_to_comp.sh
+baseOrigenFile.inp
+triton_base.inp
+
+getComps.py
+jupyterToPythonFile.py
+makeAndRunOrigen.py
+runAndKillScale.py

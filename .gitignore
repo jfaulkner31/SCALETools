@@ -1,0 +1,5 @@
+*.csv
+SCALEDepleter/__pycache__/
+SCALEDepleter/tmp/
+SCALEDepleter/tmp_*/
+SCALEParser/*/
