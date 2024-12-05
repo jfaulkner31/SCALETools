@@ -1,9 +1,9 @@
-def makeTritonFile(baseFilename, fissionable_mats):
+def makeTritonFile(baseFilename: str, fissionable_mats: list, stdcmp_tag: str):
   """
   Makes a triton file using standard composition files instead of listing nuclides out line by line.
   """
   file = open(baseFilename, 'r')
-  newFilename = baseFilename.split('.')[0] + '_stdcmp.inp'
+  newFilename = baseFilename.split('.')[0] + '_stdcmp_'+stdcmp_tag+'.inp'
   newfile = open(newFilename, 'w')
 
   do_comp = False
@@ -17,7 +17,7 @@ def makeTritonFile(baseFilename, fissionable_mats):
         print("read comp found! Now starting comp directory.")
         do_comp = True # -> activates composition mode
         for mat in fissionable_mats:
-          additional_lines += '<StdCmpMix'+str(mat)+'\n'
+          additional_lines += '<StdCmpMix'+str(mat)+'_'+stdcmp_tag+'\n'
 
     if 'end' in line and 'comp' in line:
       if line.index('end') == line.index('comp') - 1:

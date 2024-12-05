@@ -1,7 +1,7 @@
 import subprocess
 from getComps import material_lib
 
-def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, dictionaryFilename: str, outputFilename: str, tmpdir: str, pctag: str):
+def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, dictionaryFilename: str, outputFilename: str, tmpdir: str):
   """
   Makes a standard cmp file using OBIWAN script.
   materialNumber = material id
@@ -10,14 +10,13 @@ def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, di
   dictionaryFilename = dictionary of all the nuclides to include in the stdcmp input
   outputFilename = output name of the created stdcmp library
   """
-  updatedoutputfilename = outputFilename+pctag
 
-  print("Now making standard comp file for material", materialNumber, " | output=", updatedoutputfilename)
-  rm = subprocess.run(['rm', updatedoutputfilename])
-  origenrun = subprocess.run(["bash", "f71_to_comp.sh", str(materialNumber), str(temperature), filename, dictionaryFilename, updatedoutputfilename])
+  print("Now making standard comp file for material", materialNumber, " | output=", outputFilename)
+  # rm = subprocess.run(['rm', outputFilename])
+  origenrun = subprocess.run(["bash", "f71_to_comp.sh", str(materialNumber), str(temperature), filename, dictionaryFilename, outputFilename])
 
-  cp = subprocess.run(['cp', updatedoutputfilename, tmpdir+'/'+updatedoutputfilename])
-  rm = subprocess.run(['rm', updatedoutputfilename])
+  cp = subprocess.run(['cp', outputFilename, tmpdir+'/'+outputFilename])
+  rm = subprocess.run(['rm', outputFilename])
   return
 
 def makeStdCmpFromMatLib(outputFilename: str, material_lib: material_lib, material_index: int, tmpdir: str):
@@ -40,3 +39,9 @@ def makeStdCmpFromMatLib(outputFilename: str, material_lib: material_lib, materi
   # initial_mats.material_dict[101].atom_dens
   # initial_mats.material_dict[101].temp
   return
+
+def makeMatLibFromF71(filename: str):
+  """
+  Given a f71 filename, dumps the f71 contents to cmd line
+  """
+  out = subprocess.run(["bash", "f71_nuclide_dump.sh", filename], capture_output=True)

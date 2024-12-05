@@ -426,7 +426,6 @@ rnd=9884974908580001
 scd=2
 FMA=yes
 end parameters
-
 end data
 end model
 

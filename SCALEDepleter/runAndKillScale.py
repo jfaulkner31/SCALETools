@@ -35,14 +35,16 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
       with open(msg_file_name, 'r') as file:
         lines = file.readlines()
       for line in lines[::-1]:
+        if "best estimate" in line:
+          keff_line = line
         if "ORIGEN multi-zone depletion global step 1" in line:
           terminate_process = True
+          raise_exception = False
           print("Termination of process detected", flush=True)
         if "Output is stored in" in line:
-          os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-          process.wait() # garbage collection for subprocess to finish killing
-          print("Process terminated after", time.time()-start_time, "seconds.", flush=True)
-          raise Exception("SCALE job finished - terminate python script")
+          terminate_process = True
+          raise_exception = True
+          print("Termination of process detected", flush=True)
 
       time.sleep(1) # sleep for 1 seconds to
 
@@ -55,3 +57,8 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
   os.killpg(os.getpgid(process.pid), signal.SIGTERM)
   process.wait() # garbage collection for subprocess to finish killing
   print("Process terminated after", time.time()-start_time, "seconds.", flush=True)
+
+  if raise_exception:
+    raise Exception("Output terminated - exception raised due to SCALE error.")
+
+  return keff_line

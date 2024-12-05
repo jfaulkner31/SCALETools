@@ -25,15 +25,15 @@ case{
   }
 
 % printing some stuff
-  print{
-    rel_cutoff=no
-    cutoffs[ALL=1e-20]
-    nuc{
-      units=[ATOMS-PER-BARN-CM]
-      sublibs=[ALL]
-      total=yes
-    }
-  }
+% print{
+%    rel_cutoff=no
+%    cutoffs[ALL=1e-20]
+%    nuc{
+%      units=[ATOMS-PER-BARN-CM]
+%      sublibs=[ALL]
+%      total=yes
+%    }
+%  }
 
 % saving some stuff
   save{

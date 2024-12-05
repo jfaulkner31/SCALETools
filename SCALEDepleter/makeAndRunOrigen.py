@@ -3,6 +3,9 @@ import getComps
 import subprocess
 import time
 import glob
+from getComps import material_lib
+from getComps import material_normal
+import os
 
 def removePattern(pattern):
   files = glob.glob(pattern)
@@ -14,54 +17,41 @@ def runOrigenFile(origen_file, tmpdir, material_id, skipRunning):
   out = origen_file[0:-4]+'.out'
   # run origen
   if not skipRunning:
-    origenrun = subprocess.run(['scalerte', origen_file, '-T', tmpdir, '-m'])
-
-  # move origen files for this into its temp directory and then delete the random stuff polluting main dir
-  move1 = subprocess.run(['cp', origen_file, tmpdir+'/'+origen_file])
-  move2 = subprocess.run(['cp', msg, tmpdir+'/'+msg])
-  move3 = subprocess.run(['cp', out, tmpdir+'/'+out])
-
-  # now run some subprocesses to remove files -
-  # i could not get the * to work in the subprocess line so we first find files that have the pattern and then kill them file by fil
-  pattern1 = origen_file[0:-4]+'*'
-  files = glob.glob(pattern1)
-  for file in files:
-    move = subprocess.run(['rm -fr '+file], shell=True) # enable shell to allow shell globbing
-
-  pattern1 = 'F33*'+str(material_id)+'*.f33'
-  files = glob.glob(pattern1)
-  for file in files:
-    move = subprocess.run(['rm -fr '+file], shell=True) # enable shell to allow shell globbing
-
-  pattern1 = 'STD_CMP_*'
-  files = glob.glob(pattern1)
-  for file in files:
-    move = subprocess.run(['rm -fr '+file], shell=True) # enable shell to allow shell globbing
-
-  move = subprocess.run(['rm -fr '+msg], shell=True) # remove message file specifically.
+    origenrun = subprocess.run(['scalerte', tmpdir+'/'+origen_file, '-T', tmpdir, '-m'])
 
   origen_output_loc = tmpdir+'/'+out
   return origen_output_loc
 
-def makeOrigenFile(origen_base, fiss_mat_id, f33_label, step_num, steplength_days, origen_predictor_divs, specific_power, predictor_corrector_string):
+def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenResults_F71dir: str,
+                   step_num: int, steplength_days: float, origen_predictor_divs: int,
+                   specific_power: float, predictor_corrector_string: str,
+                   bos_cmp: material_normal):
+
+  # first make directory for running origen in
+  origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
+  if origen_tmpdir not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
+    mkdir = subprocess.run(['mkdir', origen_tmpdir])
 
   # open base file
   with open(origen_base, 'r') as file:
     lines = file.readlines()
   file_handle = 'ORIGEN_'+predictor_corrector_string+'_step'+str(step_num)+'_mat'+str(fiss_mat_id)
-  F33_FILE = 'F33_'+str(fiss_mat_id)+'_'+f33_label+'.f33'
-  this_file = open(file_handle+'.inp', 'w', encoding="utf-8")
+  F33_FILE = f33_files[fiss_mat_id]
+  this_file = open(origen_tmpdir+'/'+file_handle+'.inp', 'w', encoding="utf-8")
 
-  # first make copy-paste shell section
-  origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
+
   line = '=shell'
   this_file.write(line+'\n')
-  line = 'cp $INPDIR/'+F33_FILE+' $TMPDIR/'+F33_FILE
+
+  line = 'cp $INPDIR/../'+F33_FILE+' this_f33.f33'
   this_file.write(line+'\n')
-  line = 'rm $INPDIR/'+F33_FILE
-  this_file.write(line+'\n')
-  line = 'rm $INPDIR/'+'STD_CMP_'+str(fiss_mat_id)+'_'+predictor_corrector_string+'_step'+str(step_num)
-  this_file.write(line+'\n')
+
+  # line = 'rm $INPDIR/'+F33_FILE
+  # this_file.write(line+'\n')
+
+  # line = 'rm $INPDIR/'+'STD_CMP_'+str(fiss_mat_id)+'_'+predictor_corrector_string+'_step'+str(step_num)
+  # this_file.write(line+'\n')
+
   line = 'end'
   this_file.write(line+'\n\n\n')
 
@@ -71,26 +61,64 @@ def makeOrigenFile(origen_base, fiss_mat_id, f33_label, step_num, steplength_day
       CASE_TITLE = file_handle
       line = '  title="' + CASE_TITLE + '"'
     if 'F33_FILE' in line:
-      line = '    file="'+F33_FILE+'"'
+      line = '    file="this_f33.f33"'
     if 'F33_POS_INT' in line:
       F33_POS_INT=1
       line = '    pos='+str(F33_POS_INT)
     if 'TIME_VECTOR' in line:
-      TIME_VECTOR = np.linspace(0, steplength_days[step_num], origen_predictor_divs)
+      TIME_VECTOR = np.linspace(0, steplength_days, origen_predictor_divs)
       TIME_VECTOR = TIME_VECTOR[1::]
       line = '    t=' + str(TIME_VECTOR)
     if 'POWER VECTOR' in line:
-      POWER_VECTOR = specific_power * np.ones(len(TIME_VECTOR))
+      POWER_VECTOR = [specific_power] * np.ones(len(TIME_VECTOR))
       line = '  power=' + str(POWER_VECTOR) + ' %MW '
-    if 'ISOTOPES_FROM_MATS' in line: # this one is only done for Step 0 -> gets comps from the triton stdcmp file. at tstep > 0, we get comps from previous origen EOS f71 file
-      mats_file = 'STD_CMP_'+str(fiss_mat_id)+'_'+predictor_corrector_string+'_step'+str(step_num)
-      mat = getComps.get_comps_from_std_mix_file(mats_file)
-      line = mat.make_origen_materials()
+    if 'ISOTOPES_FROM_MATS' in line:
+      line = bos_cmp.make_origen_materials()
     if "EOS_OUTPUT_F71_FILE" in line:
-      EOS_OUTPUT_F71_FILE = predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+      EOS_OUTPUT_F71_FILE =  '../'+origenResults_F71dir+'/'+predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
       line = '    file="'+EOS_OUTPUT_F71_FILE+'"'
-    this_file.write(line+"\n")
+    this_file.write(line)
 
   this_file.close()
   origen_input = file_handle+'.inp'
-  return mat, origen_input, origen_tmpdir
+  return origen_input, origen_tmpdir
+
+def origenBlend(origen_f71_results_dir: str, step_num: int, mat_id: int, blended_basefilename: str):
+
+  new_input_name = blended_basefilename.split('.')[0] + '_step'+str(step_num)+'_mat'+str(mat_id)+'.inp'
+
+  blender_dir = 'tmp_blender'
+  input_path = blender_dir+'/'+new_input_name
+  if blender_dir not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
+    mkdir = subprocess.run(['mkdir', blender_dir])
+  cp = subprocess.run(['cp', blended_basefilename, blender_dir+'/'+new_input_name])
+
+  corrector_f71_string = '$INPDIR/../'+origen_f71_results_dir+'/CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
+  predictor_f71_string = '$INPDIR/../'+origen_f71_results_dir+'/PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
+  blended_f71_string ='$INPDIR/../'+origen_f71_results_dir+'/BLENDED_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
+
+  # '../../OrigenResults_F71dir/CORRECTOR_EOS_step0_mat101.f71'
+  # now make the file
+  with open(input_path, 'r') as file:
+    lines = file.readlines()
+
+  for idx, line in enumerate(lines):
+    if 'PREDICTOR_STRING_HERE' in line:
+      line = '  cp '+predictor_f71_string+' p.f71\n'
+    if 'CORRECTOR_STRING_HERE' in line:
+      line = '  cp '+corrector_f71_string+' c.f71\n'
+    if 'BLENDER_SAVE' in line:
+      line = 'save{ file="step'+str(step_num)+'_mat'+str(mat_id)+'.f71'+'"    steps=[LAST] }\n'
+    if 'BLENDED_STRING_HERE' in line:
+      line = '  cp $INPDIR/step'+str(step_num)+'_mat'+str(mat_id)+'.f71'+' '+blended_f71_string+'\n'
+    lines[idx] = line
+
+  with open(input_path, 'w') as f:
+    for line in lines:
+        f.write(f"{line}")
+
+  # returns 1 - temp for blender 2 - input file name inside of that temp, 3 - path to f71
+  return blender_dir, new_input_name, origen_f71_results_dir+'/BLENDED_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
+
+
+
