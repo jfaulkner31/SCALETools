@@ -9,6 +9,6 @@ def removeAndMakeDir(dirct: str, make=True):
   try:
     rm = shutil.rmtree(dirct)
   except:
-    if make:
-      mkdir = subprocess.run(["mkdir", dirct])
-  time.sleep(0.3)
+    print("Not removing directory", dirct, "since it does not exist")
+  if make:
+    mkdir = subprocess.run(["mkdir", dirct])

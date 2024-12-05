@@ -25,32 +25,38 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
     start_time = time.time()
     terminate_process = False
     while not terminate_process:
-      # print("Checking",msg_file_name,'if step 1 is finished yet....')
-      # Example criteria: Stop after 100 seconds
-      # if time.time() - start_time > 100:
-      #   print("Criteria met. Terminating the process.")
-      #   break
-      # time.sleep(1)  # Simulate monitoring delay
-      # criteria  stop after origen finishes running.
-      with open(msg_file_name, 'r') as file:
-        lines = file.readlines()
-      for line in lines[::-1]:
-        if "best estimate" in line:
-          keff_line = line
-        if "ORIGEN multi-zone depletion global step 1" in line:
-          terminate_process = True
-          raise_exception = False
-          print("Termination of process detected", flush=True)
-        if "Output is stored in" in line:
-          terminate_process = True
-          raise_exception = True
-          print("Termination of process detected", flush=True)
+      try:
+        # print("Checking",msg_file_name,'if step 1 is finished yet....')
+        # Example criteria: Stop after 100 seconds
+        # if time.time() - start_time > 100:
+        #   print("Criteria met. Terminating the process.")
+        #   break
+        # time.sleep(1)  # Simulate monitoring delay
+        # criteria  stop after origen finishes running.
+        with open(msg_file_name, 'r') as file:
+          lines = file.readlines()
+        for line in lines[::-1]:
+          if "best estimate" in line:
+            keff_line = line
+          if "ORIGEN multi-zone depletion global step 1" in line:
+            terminate_process = True
+            raise_exception = False
+            print("Termination of process detected", flush=True)
+          if "Output is stored in" in line:
+            terminate_process = True
+            raise_exception = True
+            print("Termination of process detected", flush=True)
 
-      time.sleep(1) # sleep for 1 seconds to
-
-
+      except KeyboardInterrupt:
+        print("Manual interruption received.")
+        process.terminate()
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        process.wait() # garbage collection for subprocess to finish killing
   except KeyboardInterrupt:
     print("Manual interruption received.")
+    process.terminate()
+    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+    process.wait() # garbage collection for subprocess to finish killing
 
   # Step 3: Kill the process
   time.sleep(6) # sleep for 20 seconds to let things finish writing/copying
