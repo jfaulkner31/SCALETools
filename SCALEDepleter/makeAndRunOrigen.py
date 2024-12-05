@@ -3,7 +3,6 @@ import getComps
 import subprocess
 import time
 import glob
-from getComps import material_lib
 from getComps import material_normal
 import os
 
@@ -25,7 +24,7 @@ def runOrigenFile(origen_file, tmpdir, material_id, skipRunning):
 def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenResults_F71dir: str,
                    step_num: int, steplength_days: float, origen_predictor_divs: int,
                    specific_power: float, predictor_corrector_string: str,
-                   bos_cmp: material_normal):
+                   bos_cmp: material_normal, volume: float):
 
   # first make directory for running origen in
   origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
@@ -39,12 +38,19 @@ def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenRe
   F33_FILE = f33_files[fiss_mat_id]
   this_file = open(origen_tmpdir+'/'+file_handle+'.inp', 'w', encoding="utf-8")
 
+  # get blended_eos_step_mat.f71 file path - used for cases where step_num > 0 or if we are using initial conditions from followon calcs
+  blended_filename = 'BLENDED_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
+  blended_filepath = origenResults_F71dir+'/'+blended_filename
 
   line = '=shell'
   this_file.write(line+'\n')
 
   line = 'cp $INPDIR/../'+F33_FILE+' this_f33.f33'
   this_file.write(line+'\n')
+
+  if step_num > 0:
+    line = 'cp $INPDIR/../'+blended_filepath+' '+blended_filename
+    this_file.write(line+'\n')
 
   # line = 'rm $INPDIR/'+F33_FILE
   # this_file.write(line+'\n')
@@ -73,7 +79,17 @@ def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenRe
       POWER_VECTOR = [specific_power] * np.ones(len(TIME_VECTOR))
       line = '  power=' + str(POWER_VECTOR) + ' %MW '
     if 'ISOTOPES_FROM_MATS' in line:
-      line = bos_cmp.make_origen_materials()
+      if step_num == 0:
+        line = bos_cmp.make_origen_materials()
+      else:
+        line = '    load{ file="' + blended_filename + '" pos=1 }'
+    if 'VOLUME_HERE' in line:
+      if step_num == 0:
+        line = '    volume=' + str(volume)+'\n'
+      else:
+        line = '\n' #  skip printing volumes if we are getting f71 material def
+    if ('units=ATOMS-PER-BARN-CM' in line) & (step_num > 0):
+      line = '\n' # do not print units= part of line -
     if "EOS_OUTPUT_F71_FILE" in line:
       EOS_OUTPUT_F71_FILE =  '../'+origenResults_F71dir+'/'+predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
       line = '    file="'+EOS_OUTPUT_F71_FILE+'"'

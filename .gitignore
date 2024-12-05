@@ -2,5 +2,10 @@
 SCALEDepleter/__pycache__/
 SCALEDepleter/tmp/
 SCALEDepleter/tmp_*/
+SCALEDepleter/*.pkl
+SCALEDepleter/*.out
+SCALEDepleter/*.msg
+SCALEDepleter/*.tempdir.path
 SCALEParser/*/
 SCALEParser/__pycache__/
+

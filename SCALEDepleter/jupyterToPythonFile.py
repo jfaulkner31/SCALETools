@@ -28,17 +28,17 @@ import powerFromOutput
 """
 
 # fissionable regions - used for origen later
-fissionable_mats = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116]
-fissionable_mats_vols = [6.02834870915574000000E+04]*16
-residual_number_density = 1e-20
-
-# TODO add volumes, get fission source shape after monte carlo from MC output, use fission source shape to adjust poewrs in each node.
+fissionable_mats = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116] # list of fissionable materials we are depleting -
+fissionable_mats_vols = [6.02834870915574000000E+04]*16 # list of vols for each fissionable material
+residual_number_density = 1e-20 # residual number density for trace nuclides in initial conditions
 
 # ORIGEN information
-num_steps = 3
-include_non_fission_material_power = True
-specific_power = [1e-4, 1e-4, 1e-4]
-steplength_days = [5, 5, 5]
+num_steps = 3 # number depletion step --- should be len(specific_power)
+include_non_fission_material_power = True # include power effects from non-fissionable materials?
+print_transport_powers = True  # print powers after every transport step?
+system_IHM_mass_grams = 7.213356e+04 # heavy metal mass in grams i the initial system - the ENTIRE system.
+specific_power = [200, 200, 200] # MW/TIHM
+steplength_days = [5, 5, 5] # length of each step in days
 origen_predictor_divs = 100 # number of time divs for predictor
 origen_corrector_divs = 100 # number of time divs for corrector
 
@@ -53,6 +53,8 @@ MonteCarloResults_F33dir = 'MonteCarloResults_F33'
 # nprocs
 Nprocs = 48
 
+# todo: need to modify makeOrigen pytho file so that it adds the Blended f71 file as the initial condition for step_num > 1
+# todo... currently we arent using the entire EOS nuclide vector from the previous calculation....
 ##################################################################
 ############################ SETUP ###############################
 ##################################################################
@@ -78,9 +80,13 @@ fh.close()
 time_lib.append_lib(initial_mats, time=0.0, step=int(0), PC_flag='C') # C flag since it is the "true" solution
 
 # completely remove and remake some directories - since we are makign a new case
-removeAndMakeDir.removeAndMakeDir(dirct=tmpdir)
-removeAndMakeDir.removeAndMakeDir(dirct=MonteCarloResults_F33dir)
-removeAndMakeDir.removeAndMakeDir(dirct=origenResults_F71dir)
+removeAndMakeDir.removeAndMakeDir(dirct=tmpdir, make=True)
+removeAndMakeDir.removeAndMakeDir(dirct=MonteCarloResults_F33dir, make=True)
+removeAndMakeDir.removeAndMakeDir(dirct=origenResults_F71dir, make=True)
+removeAndMakeDir.removeAndMakeDir(dirct='tmp_blender', make=False)
+for idx in range(num_steps):
+  removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_PREDICTOR_step'+str(idx), make=False)
+  removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_CORRECTOR_step'+str(idx), make=False)
 
 # we need to add initial nuclides to addnuxdict - addnux dict holds all the addnux nuclides + nuclides defined in the initial material defs
 addnuxdict, new_isotopes_from_addnux = getComps.makeNewAddnuxDict(time_lib.mats_by_steps[0]['C'].material_dict, tmpdir, addnuxdictbase)
@@ -103,13 +109,14 @@ for material_index in fissionable_mats:
 scale_run_line_c = ['scalerte', corrected_triton_input, '-T', tmpdir, '-m'] # for pc
 scale_run_line_p = ['scalerte', predicted_triton_input, '-T', tmpdir, '-m'] # for pc
 
+# initializing output data
 power_by_step = {}
 keff_lines = []
 
 # start iteration
 for step_num in range(num_steps):
   steplength_days_this_step = steplength_days[step_num]
-  specific_power_this_step = specific_power[step_num]
+  specific_power_this_step = specific_power[step_num] * system_IHM_mass_grams / 1e6 # multiply specific power by the amount of tons in system
   step_start_time = sum(steplength_days[0:step_num])
   step_end_time = sum(steplength_days[0:step_num+1])
 
@@ -127,8 +134,9 @@ for step_num in range(num_steps):
     f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir)
 
     # get and append power
-    power_by_step[step_num] = powerFromOutput.getPower(fission_mat_ids=fissionable_mats, include_non_fission_material_power=False, filename=corrected_triton_input)
-    print(power_by_step)
+    power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
+                                                      include_non_fission_material_power=include_non_fission_material_power,
+                                                      filename=corrected_triton_input, total_power_python=specific_power_this_step)
   else:
     # if we are not doing very first step, use f33 files from T1 from previous step
     f33_files = f33_files_next
@@ -142,14 +150,15 @@ for step_num in range(num_steps):
 
 
   # make origen file, append origen file to list of origen files, append Beginning of step mat composition to the material library.
-  for fiss_mat_id in fissionable_mats:
+  for idx, fiss_mat_id in enumerate(fissionable_mats):
     bos_mat_lib = time_lib.material_lib_from_step(requested_step=step_num, PC_flag='C')
     bos_mat_lib_this_mat = bos_mat_lib.material_dict[fiss_mat_id]
     origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenFile(origen_base=origen_base, fiss_mat_id=fiss_mat_id, f33_files=f33_files,
                                                                         origenResults_F71dir=origenResults_F71dir, step_num=step_num,
                                                                         steplength_days=steplength_days_this_step, origen_predictor_divs=origen_predictor_divs,
-                                                                        specific_power=specific_power_this_step, predictor_corrector_string='PREDICTOR',
-                                                                        bos_cmp=bos_mat_lib_this_mat)
+                                                                        specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
+                                                                        predictor_corrector_string='PREDICTOR',
+                                                                        bos_cmp=bos_mat_lib_this_mat, volume=fissionable_mats_vols[idx])
     origen_file_list.append(origen_file_handle)
     origen_tmpdirs.append(origen_tmpdir)
 
@@ -185,8 +194,9 @@ for step_num in range(num_steps):
   f33_files_next = f33_files # set f33 files for the BOS for the next step....
 
   # append power
-  power_by_step[step_num] = powerFromOutput.getPower(fission_mat_ids=fissionable_mats, include_non_fission_material_power=False, filename=predicted_triton_input)
-  print(power_by_step)
+  power_by_step[step_num+1] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
+                                                     include_non_fission_material_power=include_non_fission_material_power,
+                                                     filename=predicted_triton_input, total_power_python=specific_power_this_step)
   ##############################################################
   ################## CORRECTOR - ORIGEN ########################
   ##############################################################
@@ -198,14 +208,15 @@ for step_num in range(num_steps):
 
   # make origen file, append origen file to list of origen files, append Beginning of step mat composition to the material library -
   # use f33 files from the corrector monte carlo - f33_files from above
-  for fiss_mat_id in fissionable_mats:
+  for idx, fiss_mat_id in enumerate(fissionable_mats):
     bos_mat_lib = time_lib.material_lib_from_step(requested_step=step_num, PC_flag='C')
     bos_mat_lib_this_mat = bos_mat_lib.material_dict[fiss_mat_id]
     origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenFile(origen_base=origen_base, fiss_mat_id=fiss_mat_id, f33_files=f33_files,
                                                                         origenResults_F71dir=origenResults_F71dir, step_num=step_num,
                                                                         steplength_days=steplength_days_this_step, origen_predictor_divs=origen_predictor_divs,
-                                                                        specific_power=specific_power_this_step, predictor_corrector_string='CORRECTOR',
-                                                                        bos_cmp=bos_mat_lib_this_mat)
+                                                                        specific_power=specific_power_this_step*power_by_step[step_num+1][fiss_mat_id],
+                                                                        predictor_corrector_string='CORRECTOR',
+                                                                        bos_cmp=bos_mat_lib_this_mat, volume=fissionable_mats_vols[idx])
     origen_file_list.append(origen_file_handle)
     origen_tmpdirs.append(origen_tmpdir)
 
@@ -245,3 +256,14 @@ for step_num in range(num_steps):
 
 for line in keff_lines:
   print(line)
+
+
+# Save the data to a pickle file
+import pickle
+
+with open('keff.pkl', 'wb') as file:
+  pickle.dump(keff_lines, file)
+with open('power.pkl', 'wb') as file:
+  pickle.dump(power_by_step, file)
+with open('nuclides.pkl', 'wb') as file:
+  pickle.dump(time_lib, file)

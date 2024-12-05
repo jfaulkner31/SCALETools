@@ -21,6 +21,7 @@ case{
 % materials def
   mat{
     units=ATOMS-PER-BARN-CM
+    volume=VOLUME_HERE
     iso=[ISOTOPES_FROM_MATS]
   }
 

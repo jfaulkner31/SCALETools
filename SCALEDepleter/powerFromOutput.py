@@ -1,4 +1,4 @@
-def getPower(filename: str, include_non_fission_material_power: bool, fission_mat_ids):
+def getPower(filename: str, include_non_fission_material_power: bool, fission_mat_ids, printP: bool, total_power_python: float):
   filename = filename.split('.')[0]+'.out'
 
   target_string = "Number (MW/MTIHM)    (---)   (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)  n/(cm^2*sec)"
@@ -39,6 +39,11 @@ def getPower(filename: str, include_non_fission_material_power: bool, fission_ma
   else: # if we are NOT including non fissionable materials in the power definition
     for key in power_dict.keys():
       power_dict[key] = power_dict[key]/fissionable_mat_power
+
+  if printP:
+    print("NOW PRINTING POWERS")
+    for key in power_dict.keys():
+      print("\t",key,"|",power_dict[key],"|",power_dict[key]*total_power_python)
 
   return power_dict
 
