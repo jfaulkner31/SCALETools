@@ -7,6 +7,7 @@
   Is first step length ok in the input file?
   Is the FMA parameter set to yes?
   Are the NPG and other neutron parameters correct?
+  Is addnux set to 0 in the triton base file?
 
   To run via python command line: python ...py machinefile tmpdir numProcsTransport
 """
@@ -22,10 +23,10 @@ print_transport_powers = True  # print powers after every transport step?
 system_IHM_mass_grams = 7.213356e+04 # heavy metal mass in grams i the initial system - the ENTIRE system.
 specific_power = [200, 200, 200, 200, 200, 200] # MW/TIHM
 steplength_days = [5, 5, 5, 5, 5, 5] # length of each step in days
-origen_predictor_divs = 100 # number of time divs for predictor
-origen_corrector_divs = 100 # number of time divs for corrector
+origen_predictor_divs = 100 # number of time divs for predictor - use for CEBM model only
+origen_corrector_divs = 100 # number of time divs for corrector - use for CEBM model only
 
-# File Handles
+# File Handles - keep as is - only consider changing the addnux dictionary
 addnuxdictbase = 'addnuxDicts/addnux3Dict.dict'
 base_triton = 'triton_base.inp'
 origen_base = 'baseOrigenFile.inp'

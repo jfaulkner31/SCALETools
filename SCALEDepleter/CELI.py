@@ -27,7 +27,7 @@ Step 5 - Restart at Step 1 using T1.f33 as BOS f33 file and BLENDED.f71 as BOS c
 """
 
 
-def CEBM(fissionable_mats: list,
+def CELI(fissionable_mats: list,
           fissionable_mats_vols: list,
           residual_number_density: float,
           include_non_fission_material_power: bool,
@@ -36,17 +36,17 @@ def CEBM(fissionable_mats: list,
           specific_power: list,
           steplength_days: list,
           origen_predictor_divs: int,
-          origen_corrector_divs: int,
           addnuxdictbase: str,
           base_triton: str,
           origen_base: str,
-          blender_base: str,
           origenResults_F71dir: str,
           MonteCarloResults_F33dir: str,
           Nprocs: int,
           machinefile: str,
           tmpdir: str,
-          is_parallel: bool):
+          is_parallel: bool,
+          origen_LI_divs: int,
+          origen_steps_per_div: int):
 
   ##################################################################
   ####################### SANITY CHECKS ############################
@@ -89,6 +89,7 @@ def CEBM(fissionable_mats: list,
   removeAndMakeDir.removeAndMakeDir(dirct=MonteCarloResults_F33dir, make=True)
   removeAndMakeDir.removeAndMakeDir(dirct=origenResults_F71dir, make=True)
   removeAndMakeDir.removeAndMakeDir(dirct='tmp_blender', make=False)
+  removeAndMakeDir.removeAndMakeDir(dirct='tmp_interpolated', make=False)
   for idx in range(num_steps):
     removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_PREDICTOR_step'+str(idx), make=False)
     removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_CORRECTOR_step'+str(idx), make=False)
@@ -142,6 +143,7 @@ def CEBM(fissionable_mats: list,
 
       # make a folder with all f33's from the tmpdir moved into the new folder - label folder with step number - f33_files is a dict[material_id]
       f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir)
+      f33_files_bos = f33_files # set bos f33 files
 
       # get and append power
       power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
@@ -150,6 +152,7 @@ def CEBM(fissionable_mats: list,
     else:
       # if we are not doing very first step, use f33 files from T1 from previous step
       f33_files = f33_files_next
+      f33_files_bos = f33_files # bos f33_files
     ##############################################################
     ################## PREDICTOR - ORIGEN ########################
     ##############################################################
@@ -169,7 +172,7 @@ def CEBM(fissionable_mats: list,
                                                                           specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
                                                                           predictor_corrector_string='PREDICTOR',
                                                                           bos_cmp=bos_mat_lib_this_mat, volume=fissionable_mats_vols[idx],
-                                                                          no_blended_name=False)
+                                                                          no_blended_name=True)
       origen_file_list.append(origen_file_handle)
       origen_tmpdirs.append(origen_tmpdir)
 
@@ -203,6 +206,7 @@ def CEBM(fissionable_mats: list,
     # now copy over the new f33 files
     f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir)
     f33_files_next = f33_files # set f33 files for the BOS for the next step....
+    f33_files_eos = f33_files # eos f33 files
 
     # append power
     power_by_step[step_num+1] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
@@ -212,29 +216,47 @@ def CEBM(fissionable_mats: list,
     ################## CORRECTOR - ORIGEN ########################
     ##############################################################
 
-    # now deplete using origen with the new f33 files from step_num+1
+    # we now have both f33 files. need to perform interpolations based on num substeps
+    # origen_LI_divs # number of f33 interpolations
+    # origen_steps_per_div # number of origen timesteps per interpolation
+    dt = steplength_days_this_step / origen_LI_divs # how long averaging step is
+    del_t = dt  / origen_steps_per_div  # how long each microstep is
 
+    # get midpoints of the LI steps 0 is BOS and 5 is EOS - get 0.5,1.5,etc.
+    # these are the times we interpolate f33 files to.
+    #   0.5   1.5   2.5   3.5   4.5
+    # |     |     |     |     |     |
+    # 0     1     2     3     4     5
+    LI_ends = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[1:]
+    LI_starts = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[0:-1]
+    LI_times = ( LI_ends + LI_starts ) /2.0
+    start_time = 0.0
+    end_time = start_time + steplength_days_this_step
     origen_file_list = []
     origen_tmpdirs = []
-
-    # make origen file, append origen file to list of origen files, append Beginning of step mat composition to the material library -
-    # use f33 files from the corrector monte carlo - f33_files from above
+    # now doing origen
     for idx, fiss_mat_id in enumerate(fissionable_mats):
+      # first make interpolated f33 files.
+      eos_file = f33_files_eos[fiss_mat_id]
+      bos_file = f33_files_bos[fiss_mat_id]
+      filepath = "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id) # folder that holds the interpolated f33 files
+      f33_substep_filepath_list = makeAndRunOrigen.f33Interpolate(filepath=filepath, bos_file=bos_file, eos_file=eos_file, times=LI_times, start_time=start_time, end_time=end_time)
       bos_mat_lib = time_lib.material_lib_from_step(requested_step=step_num, PC_flag='C')
       bos_mat_lib_this_mat = bos_mat_lib.material_dict[fiss_mat_id]
+      # interpolated files in "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id)+'/'+substep+str(sumstepInt)+'.f33' ---> tmp_interpolated/step0/mat101/substep0.f33
+
+      # now make origen files that we are going to run
       # todo - power_by_step[step_num] or step_num+1 for use in makeOrigenFile for the corrector? it was originalkly step_num+1 but i think i fixed it?
-      origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenFile(origen_base=origen_base, fiss_mat_id=fiss_mat_id, f33_files=f33_files,
-                                                                          origenResults_F71dir=origenResults_F71dir, step_num=step_num,
-                                                                          steplength_days=steplength_days_this_step, origen_predictor_divs=origen_corrector_divs,
-                                                                          specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
-                                                                          predictor_corrector_string='CORRECTOR',
-                                                                          bos_cmp=bos_mat_lib_this_mat, volume=fissionable_mats_vols[idx],
-                                                                          no_blended_name=False)
+      origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenCELIFile(fiss_mat_id=fiss_mat_id, step_num=step_num, predictor_corrector_string='CORRECTOR',
+                                                                              f33_substep_filepath_list=f33_substep_filepath_list, origenResults_F71dir=origenResults_F71dir,
+                                                                              LI_starts=LI_starts, LI_ends=LI_ends, dt=dt, del_t=del_t, origen_steps_per_div=origen_steps_per_div,
+                                                                              specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
+                                                                              volume=fissionable_mats_vols[idx], bos_cmp=bos_mat_lib_this_mat)
       origen_file_list.append(origen_file_handle)
       origen_tmpdirs.append(origen_tmpdir)
 
-
-    # run origen now, unpack isotopics, then append isotopics to time_lib
+    # now run origen, unpack isotopics, and then append isotopics to the time_lib
+    corrected_mat_lib = getComps.material_lib()
     for idx, fiss_mat_id in enumerate(fissionable_mats):
       # get temp directory for this origen directory
       temp = origen_tmpdirs[idx]
@@ -244,32 +266,21 @@ def CEBM(fissionable_mats: list,
       origen_output_loc = makeAndRunOrigen.runOrigenFile(tmpdir=temp, origen_file=origen_inp, material_id=fiss_mat_id, skipRunning=False)
       origen_f71_loc = origenResults_F71dir+'/CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
 
-
-
-
-    # now blend files together and calculate the average of the predictor and corrector nuclide vector using Origen - predictor and corrector blended - 0.5
-    corrected_mat_lib = getComps.material_lib()
-    for idx, fiss_mat_id in enumerate(fissionable_mats):
-      blender_tmp, new_input_name, path_to_f71 = makeAndRunOrigen.origenBlend(origen_f71_results_dir=origenResults_F71dir, step_num=step_num, mat_id=fiss_mat_id, blended_basefilename=blender_base)
-      makeAndRunOrigen.runOrigenFile(tmpdir=blender_tmp, origen_file=new_input_name, material_id=-1, skipRunning=False)
-
-      # make a standard cmp from the f71 - these are the corrected isotopes after averaging
+      # get std cmp, append it to corrected_mat_lib
       stdCmpFilename = 'StdCmpMix'+str(fiss_mat_id)+'_corrected_cmp'
       temperature = time_lib.material_lib_from_step(requested_step=0, PC_flag='C').material_dict[fiss_mat_id].temp # temperature from beginning of simulation for this matid
-      origen_f71_loc = path_to_f71
-
-      # make corrector stdcmp and place them in tmpdir
       _ = makeStdCmp.makeStdCmpFromF71(materialNumber=fiss_mat_id, temperature=temperature, filename=origen_f71_loc, dictionaryFilename=addnuxdict, outputFilename=stdCmpFilename, tmpdir=tmpdir)
-
-      # get material
       corrected_mat_lib.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
 
-    # append corrected mat lib to time lib
+    # append coirrected lib to time_lib
     time_lib.append_lib(time=step_end_time, lib=corrected_mat_lib, step=step_num+1, PC_flag='C')
+  ##############################################################
+  ###################### DATA OUTPUT ###########################
+  ##############################################################
+
 
   for line in keff_lines:
     print(line)
-
 
   # Save the data to a pickle file
   import pickle

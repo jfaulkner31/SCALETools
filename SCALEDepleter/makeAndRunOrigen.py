@@ -24,7 +24,8 @@ def runOrigenFile(origen_file, tmpdir, material_id, skipRunning):
 def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenResults_F71dir: str,
                    step_num: int, steplength_days: float, origen_predictor_divs: int,
                    specific_power: float, predictor_corrector_string: str,
-                   bos_cmp: material_normal, volume: float):
+                   bos_cmp: material_normal, volume: float,
+                   no_blended_name: bool):
 
   # first make directory for running origen in
   origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
@@ -39,13 +40,20 @@ def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenRe
   this_file = open(origen_tmpdir+'/'+file_handle+'.inp', 'w', encoding="utf-8")
 
   # get blended_eos_step_mat.f71 file path - used for cases where step_num > 0 or if we are using initial conditions from followon calcs
-  blended_filename = 'BLENDED_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
-  blended_filepath = origenResults_F71dir+'/'+blended_filename
+  # if we are not doing the CEBM scheme, blended name is just CORRECTOR_.... since we arent doing blending unless we are doing CEBM
+  if no_blended_name: # defaults to corrector_....
+    blended_filename = 'CORRECTOR_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
+    blended_filepath = blended_filepath = origenResults_F71dir+'/'+blended_filename
+  else: # for the CEBM scheme where we use blending to average
+    blended_filename = 'BLENDED_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
+    blended_filepath = origenResults_F71dir+'/'+blended_filename
+
 
   line = '=shell'
   this_file.write(line+'\n')
 
-  line = 'cp $INPDIR/../'+F33_FILE+' this_f33.f33'
+  this_f33_name = 'mat'+str(fiss_mat_id)+'.f33'
+  line = 'cp $INPDIR/../'+F33_FILE+' '+this_f33_name
   this_file.write(line+'\n')
 
   if step_num > 0:
@@ -67,10 +75,9 @@ def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenRe
       CASE_TITLE = file_handle
       line = '  title="' + CASE_TITLE + '"'
     if 'F33_FILE' in line:
-      line = '    file="this_f33.f33"'
+      line = '    file="'+this_f33_name+'"'
     if 'F33_POS_INT' in line:
-      F33_POS_INT=1
-      line = '    pos='+str(F33_POS_INT)
+      line = '    pos=1'
     if 'TIME_VECTOR' in line:
       TIME_VECTOR = np.linspace(0, steplength_days, origen_predictor_divs)
       TIME_VECTOR = TIME_VECTOR[1::]
@@ -136,5 +143,114 @@ def origenBlend(origen_f71_results_dir: str, step_num: int, mat_id: int, blended
   # returns 1 - temp for blender 2 - input file name inside of that temp, 3 - path to f71
   return blender_dir, new_input_name, origen_f71_results_dir+'/BLENDED_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
 
+def f33Interpolate(filepath: str, bos_file: str, eos_file: str, times: list, start_time: float, end_time: float):
+  """
+  f33_files_bos (dict): f33 files for each mat id at the beginning of this step.
+  f33_files_eos (dict): f33 files for each mat id at the end of this step.
+  times (list): list of floats
+  start_time (float): the start time of the current step.
+  end_time (float): the end time of the current step.
+  """
+  mkdir = os.makedirs(filepath)
+  f33_substep_filepath_list = []
+  for idx, time in enumerate(times):
+    f33name = 'substep'+str(idx)+'.f33'
+    f33path = filepath+'/'+f33name
+    f33_substep_filepath_list.append(f33path)
+    p = subprocess.run(['bash', 'interp2files.sh', bos_file, eos_file, str(start_time), str(end_time), str(time), f33path])
+  return f33_substep_filepath_list
 
+def makeOrigenCELIFile(fiss_mat_id: int,
+                       step_num: int,
+                       predictor_corrector_string: str,
+                       f33_substep_filepath_list: list,
+                       origenResults_F71dir: str,
+                       LI_starts: list,
+                       LI_ends: list,
+                       dt: float,
+                       del_t: float,
+                       origen_steps_per_div: int,
+                       specific_power: float,
+                       volume: float,
+                       bos_cmp: material_normal):
+  """
+  Makes origen files for CE/LI scheme corrector step.
+  For the corrector step, we use linear interpolated f33 files for a set number of steps (dt long)
+  Inside each of those steps are substeps that are del_t long.
+  """
+  # make temp directory for running origen for this step
+  origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
+  if origen_tmpdir not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
+    mkdir = subprocess.run(['mkdir', origen_tmpdir])
+
+  # filename of origen input file and making this_file
+  file_handle = 'ORIGEN_'+predictor_corrector_string+'_step'+str(step_num)+'_mat'+str(fiss_mat_id)
+  this_file = open(origen_tmpdir+'/'+file_handle+'.inp', 'w', encoding="utf-8")
+
+  # name of starting composition f71 file
+  f71filename_start = predictor_corrector_string+'_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
+  f71filepath_start = '../'+origenResults_F71dir+'/'+f71filename_start
+
+  # copy f33 files
+  this_file.write('=shell\n')
+  for idx, start_time in enumerate(LI_starts):
+    f33name = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+'.f33'
+    this_file.write('  cp '+'$INPDIR/../'+f33_substep_filepath_list[idx]+' '+f33name+'\n')
+  this_file.write('end\n')
+
+  # now write origen file
+  this_file.write('=origen\nsolver{type=CRAM}\n')
+  for idx, start_time in enumerate(LI_starts):
+    if idx == len(LI_starts)-1:
+      last_idx = True
+    else:
+      last_idx = False
+    CASETITLE = 'mat'+str(fiss_mat_id)+'_step'+str(step_num)+'_substep'+str(idx)
+    F33_FILEPATH = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+'.f33'
+
+    TIME_VECTOR = [0]
+    dt_vec = [del_t]*origen_steps_per_div # [del_t] -> [delt delt delt ...]
+    for this in dt_vec:
+      TIME_VECTOR.append(TIME_VECTOR[-1]+this)
+    TIME_VECTOR = TIME_VECTOR[1:] #  delete the leading zero
+
+    POWER_VECTOR = [specific_power]*origen_steps_per_div
+    VOLUME = volume
+
+    this_file.write("case{\n")
+    this_file.write('  title="'+CASETITLE+'"\n')
+    this_file.write('  lib{\n' )
+    this_file.write('    file="'+F33_FILEPATH+'"\n')
+    this_file.write('    pos=1\n')
+    this_file.write('  }\n')
+    this_file.write('  time{\n')
+    this_file.write('    units=DAYS\n')
+    this_file.write('    start=0\n')
+    this_file.write('    t='+str(TIME_VECTOR)+'\n')
+    this_file.write('  }\n')
+    this_file.write('  power='+str(POWER_VECTOR)+' % MW\n')
+    if (step_num == 0) & (idx == 0): # step_num == 0 we use from stdcmp library. idx != 0 we use from end of previous origen case.
+      ISOTOPES_FROM_MATS = bos_cmp.make_origen_materials()
+      this_file.write('  mat{\n')
+      this_file.write('    units=ATOMS-PER-BARN-CM\n    volume='+str(VOLUME)+'\n'+ISOTOPES_FROM_MATS+'\n')
+      this_file.write('  }\n')
+    elif idx == 0: # get material def from previous EOS comp
+      this_file.write('  mat{\n')
+      this_file.write('    load{ file="'+f71filepath_start+'" pos=1 }\n')
+      this_file.write('  }\n')
+    else: # get material def from previous origen case
+      this_file.write('  mat{\n')
+      this_file.write('    previous=LAST\n')
+      this_file.write('  }\n')
+    if last_idx:
+      EOS_OUTPUT_F71_FILE =  '../'+origenResults_F71dir+'/'+predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+      this_file.write('  save{ file="'+EOS_OUTPUT_F71_FILE+'"\n    steps=[LAST]\n  }\n')
+    this_file.write('}\n')
+
+
+  this_file.write('end\n')
+  this_file.close()
+
+  origen_input = file_handle
+  return origen_input, origen_tmpdir
 
