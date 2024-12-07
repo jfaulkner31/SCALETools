@@ -37,6 +37,17 @@ class material_normal:
     line+=']'
     return line
 
+  def return_iso_atom_dens(self, iso: str):
+    try:
+      lower_iso = iso.lower()
+      lower_list = [item.lower() for item in self.isotope_list]
+      idx = lower_list.index(lower_iso)
+      return self.atom_dens[idx]
+    except:
+      raise Exception("Requested isotope "+iso+" not found!")
+
+
+
 
 
 

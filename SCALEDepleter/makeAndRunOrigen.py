@@ -4,6 +4,7 @@ import subprocess
 import time
 import glob
 from getComps import material_normal
+from getComps import material_lib
 import os
 
 def removePattern(pattern):
@@ -253,4 +254,94 @@ def makeOrigenCELIFile(fiss_mat_id: int,
 
   origen_input = file_handle
   return origen_input, origen_tmpdir
+
+def makeOrigenCEPEFile(fission_mat_ids: list,
+                       substep_power: dict,
+                       substep_idx: int,
+                       origen_steps_per_div: int,
+                       del_t: float,
+                       specific_power_this_step: float,
+                       volumes: list,
+                       step_num: int,
+                       f33_substep_filepath_dict: dict,
+                       bos_cmp_lib: material_lib,
+                       origenResults_F71dir: str,
+                       LI_starts: list):
+  """
+  Depletes N materials for a single substep
+  """
+  # make temp directory for running origen for this step
+  origen_tmpdir = 'tmp_origen_CORRECTOR_step'+str(step_num)
+  if origen_tmpdir not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
+    mkdir = subprocess.run(['mkdir', origen_tmpdir])
+
+  # filename of origen input file and making this_file
+  file_handle = 'ORIGEN_CORRECTOR_step'+str(step_num)+'_substep'+str(substep_idx)
+  this_file = open(origen_tmpdir+'/'+file_handle+'.inp', 'w', encoding="utf-8")
+
+  # get names of starting f71 files from beginning of substep or BOS as well as f33 files for this substep
+  bos_f71_by_mat_id = {} # f71 files by mat_id
+  eos_f71_by_mat_id = {}
+  f33_file_dict = {} # f33 files by mat_id
+  for mat_id in fission_mat_ids:
+    f33_file_dict[mat_id] = f33_substep_filepath_dict[mat_id][substep_idx]
+
+    if substep_idx == 0:
+      bos_f71_by_mat_id[mat_id] = 'CORRECTOR_EOS_step'+str(step_num-1)+'_mat'+str(mat_id)+'.f71'
+    else:
+      bos_f71_by_mat_id[mat_id] = 'CORRECTOR_substep'+str(substep_idx-1)+'_mat'+str(mat_id)+'.f71'
+
+    if substep_idx == (len(LI_starts)-1): #  last step  - save eos file as special
+      eos_f71_by_mat_id[mat_id] = 'CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
+    else:
+      eos_f71_by_mat_id[mat_id] = 'CORRECTOR_substep'+str(substep_idx)+'_mat'+str(mat_id)+'.f71'
+
+  # cp f33 files
+  this_file.write('=shell\n')
+  for fiss_mat_id in fission_mat_ids:
+    f33name = 'mat'+str(fiss_mat_id)+'_substep'+str(substep_idx)+'.f33'
+    this_file.write('  cp '+'$INPDIR/../'+f33_file_dict[mat_id]+' '+f33name+'\n')
+  this_file.write('end\n')
+
+  # now write origen file
+  this_file.write('=origen\nsolver{type=CRAM}\n')
+  for idx, fiss_mat_id in enumerate(fission_mat_ids):
+    CASETITLE = 'mat'+str(fiss_mat_id)+'_step'+str(step_num)+'_substep'+str(substep_idx)
+    F33_FILEPATH = 'mat'+str(fiss_mat_id)+'_substep'+str(substep_idx)+'.f33'
+    TIME_VECTOR = [0]
+    dt_vec = [del_t]*origen_steps_per_div # [del_t] -> [delt delt delt ...]
+    for this in dt_vec:
+      TIME_VECTOR.append(TIME_VECTOR[-1]+this)
+    TIME_VECTOR = TIME_VECTOR[1:] #  delete the leading zero
+    specific_power = specific_power_this_step * substep_power[fiss_mat_id]
+    POWER_VECTOR = [specific_power]*origen_steps_per_div
+    VOLUME = volumes[idx]
+    this_file.write("case{\n")
+    this_file.write('  title="'+CASETITLE+'"\n')
+    this_file.write('  lib{\n' )
+    this_file.write('    file="'+F33_FILEPATH+'"\n')
+    this_file.write('    pos=1\n')
+    this_file.write('  }\n')
+    this_file.write('  time{\n')
+    this_file.write('    units=DAYS\n')
+    this_file.write('    start=0\n')
+    this_file.write('    t='+str(TIME_VECTOR)+'\n')
+    this_file.write('  }\n')
+    this_file.write('  power='+str(POWER_VECTOR)+' % MW\n')
+    if (step_num == 0) & (substep_idx == 0): # step_num == 0 we use from stdcmp library. idx != 0 we use from end of previous origen case.
+      bos_cmp = bos_cmp_lib.material_dict[fiss_mat_id]
+      ISOTOPES_FROM_MATS = bos_cmp.make_origen_materials()
+      this_file.write('  mat{\n')
+      this_file.write('    units=ATOMS-PER-BARN-CM\n    volume='+str(VOLUME)+'\n'+ISOTOPES_FROM_MATS+'\n')
+      this_file.write('  }\n')
+    else: # get material def from previous EOS comp
+      this_file.write('  mat{\n')
+      this_file.write('    load{ file="'+'../'+origenResults_F71dir+'../'+bos_f71_by_mat_id[mat_id]+'" pos=1 }\n')
+      this_file.write('  }\n')
+    EOS_OUTPUT_F71_FILE = '../'+origenResults_F71dir+'/'+eos_f71_by_mat_id[mat_id]
+    this_file.write('  save{ file="'+EOS_OUTPUT_F71_FILE+'"\n    steps=[LAST]\n  }\n')
+    this_file.write('}\n')
+  this_file.write('end\n')
+  this_file.close()
+
 
