@@ -21,14 +21,20 @@ residual_number_density = 1e-20 # residual number density for trace nuclides in 
 include_non_fission_material_power = True # include power effects from non-fissionable materials?
 print_transport_powers = True  # print powers after every transport step?
 system_IHM_mass_grams = 7.213356e+04 # heavy metal mass in grams i the initial system - the ENTIRE system.
-specific_power = [200, 200, 200, 200, 200, 200] # MW/TIHM
-steplength_days = [5, 5, 5, 5, 5, 5] # length of each step in days
-origen_predictor_divs = 100 # number of time divs for predictor - use for CEBM model only
+specific_power = [200]*145 # MW/TIHM
+steplength_days = [0.125, 0.25, 0.625, 1, 1.125, 1.25, 1.875, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 1.25]
+
+origen_predictor_divs = 100 # number of time divs for predictor - use for CEBM model and CELI models
 origen_LI_divs = 10 # how many times during origen calculation the f33 is divided - value of 10 means we use 10 interpolated f33 files per material - use for CELI scheme
 origen_steps_per_div = 10 # how many origen substeps are used for each division of f33 files
 
 # File Handles - keep as is - only consider changing the addnux dictionary
-addnuxdictbase = 'addnuxDicts/addnux0Dict.dict'
+addnuxdictbase = 'addnuxDicts/addnux3Dict.dict'
 base_triton = 'triton_base.inp'
 origen_base = 'baseOrigenFile.inp'
 origenResults_F71dir = 'OrigenResults_F71dir'

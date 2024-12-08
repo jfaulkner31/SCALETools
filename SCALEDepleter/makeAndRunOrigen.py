@@ -320,7 +320,7 @@ def makeOrigenCEPEFile(fission_mat_ids: list,
       TIME_VECTOR.append(TIME_VECTOR[-1]+this)
     TIME_VECTOR = TIME_VECTOR[1:] #  delete the leading zero
     specific_power = specific_power_this_step * substep_power[fiss_mat_id]
-    POWER_VECTOR = [specific_power]*origen_steps_per_div
+    POWER_VECTOR = [float(specific_power)]*origen_steps_per_div
     VOLUME = volumes[idx]
     this_file.write("case{\n")
     this_file.write('  title="'+CASETITLE+'"\n')
