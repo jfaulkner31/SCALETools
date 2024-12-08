@@ -152,13 +152,17 @@ def f33Interpolate(filepath: str, bos_file: str, eos_file: str, times: list, sta
   start_time (float): the start time of the current step.
   end_time (float): the end time of the current step.
   """
+  print("Now interpolating f33 files:", bos_file, '('+str(start_time)+') -> '+ eos_file +'('+str(end_time)+')')
   mkdir = os.makedirs(filepath)
   f33_substep_filepath_list = []
   for idx, time in enumerate(times):
+    print("\tNow doing:", time)
     f33name = 'substep'+str(idx)+'.f33'
     f33path = filepath+'/'+f33name
     f33_substep_filepath_list.append(f33path)
-    p = subprocess.run(['bash', 'interp2files.sh', bos_file, eos_file, str(start_time), str(end_time), str(time), f33path])
+    p = subprocess.run(['bash', 'interp2files.sh', bos_file, eos_file, str(start_time), str(end_time), str(time), f33path],
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.STDOUT)
   return f33_substep_filepath_list
 
 def makeOrigenCELIFile(fiss_mat_id: int,
@@ -283,6 +287,7 @@ def makeOrigenCEPEFile(fission_mat_ids: list,
   bos_f71_by_mat_id = {} # f71 files by mat_id
   eos_f71_by_mat_id = {}
   f33_file_dict = {} # f33 files by mat_id
+  f71_filenames = {} # f71 output filenames dict where key = mateerial id
   for mat_id in fission_mat_ids:
     f33_file_dict[mat_id] = f33_substep_filepath_dict[mat_id][substep_idx]
 
@@ -295,12 +300,13 @@ def makeOrigenCEPEFile(fission_mat_ids: list,
       eos_f71_by_mat_id[mat_id] = 'CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
     else:
       eos_f71_by_mat_id[mat_id] = 'CORRECTOR_substep'+str(substep_idx)+'_mat'+str(mat_id)+'.f71'
+    f71_filenames[mat_id] = eos_f71_by_mat_id[mat_id]
 
   # cp f33 files
   this_file.write('=shell\n')
   for fiss_mat_id in fission_mat_ids:
     f33name = 'mat'+str(fiss_mat_id)+'_substep'+str(substep_idx)+'.f33'
-    this_file.write('  cp '+'$INPDIR/../'+f33_file_dict[mat_id]+' '+f33name+'\n')
+    this_file.write('  cp '+'$INPDIR/../'+f33_file_dict[fiss_mat_id]+' '+f33name+'\n')
   this_file.write('end\n')
 
   # now write origen file
@@ -336,12 +342,18 @@ def makeOrigenCEPEFile(fission_mat_ids: list,
       this_file.write('  }\n')
     else: # get material def from previous EOS comp
       this_file.write('  mat{\n')
-      this_file.write('    load{ file="'+'../'+origenResults_F71dir+'../'+bos_f71_by_mat_id[mat_id]+'" pos=1 }\n')
+      # fix ??? possibly fix the use of step_num in the lines below for pos= but i think we are ok here....
+      if substep_idx == 0:
+        this_file.write('    load{ file="'+'../'+origenResults_F71dir+'/'+bos_f71_by_mat_id[fiss_mat_id]+'" pos=1 }\n')
+      else:
+        this_file.write('    load{ file="'+'../'+origenResults_F71dir+'/'+bos_f71_by_mat_id[fiss_mat_id]+'" pos='+str(step_num+1)+' }\n')
       this_file.write('  }\n')
-    EOS_OUTPUT_F71_FILE = '../'+origenResults_F71dir+'/'+eos_f71_by_mat_id[mat_id]
+    EOS_OUTPUT_F71_FILE = '../'+origenResults_F71dir+'/'+eos_f71_by_mat_id[fiss_mat_id]
     this_file.write('  save{ file="'+EOS_OUTPUT_F71_FILE+'"\n    steps=[LAST]\n  }\n')
     this_file.write('}\n')
   this_file.write('end\n')
   this_file.close()
+
+  return file_handle, origen_tmpdir, f71_filenames
 
 

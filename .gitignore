@@ -5,6 +5,9 @@ SCALEDepleter/tmp_*/
 SCALEDepleter/*.pkl
 SCALEDepleter/*.out
 SCALEDepleter/*.msg
+SCALEDepleter/OrigenResults_F71dir/
+SCALEDepleter/MonteCarloResults_F33/
+SCALEDepleter/obiwantesting/
 SCALEDepleter/*.tempdir.path
 SCALEParser/*/
 SCALEParser/__pycache__/

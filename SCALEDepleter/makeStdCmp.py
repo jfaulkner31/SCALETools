@@ -13,7 +13,10 @@ def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, di
 
   print("Now making standard comp file for material", materialNumber, " | output=", outputFilename)
   # rm = subprocess.run(['rm', outputFilename])
-  origenrun = subprocess.run(["bash", "f71_to_comp.sh", str(materialNumber), str(temperature), filename, dictionaryFilename, outputFilename])
+  origenrun = subprocess.run(["bash", "f71_to_comp.sh", str(materialNumber), str(temperature), filename, dictionaryFilename, outputFilename],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.STDOUT)
+  print("Stdcmp file with name", outputFilename, 'was successfully made!')
 
   cp = subprocess.run(['cp', outputFilename, tmpdir+'/'+outputFilename])
   rm = subprocess.run(['rm', outputFilename])
@@ -40,8 +43,16 @@ def makeStdCmpFromMatLib(outputFilename: str, material_lib: material_lib, materi
   # initial_mats.material_dict[101].temp
   return
 
-def makeMatLibFromF71(filename: str):
-  """
-  Given a f71 filename, dumps the f71 contents to cmd line
-  """
-  out = subprocess.run(["bash", "f71_nuclide_dump.sh", filename], capture_output=True)
+def grabNuclideFromF71(filename: str, nuclide: str, precision: int):
+  """"""
+  # obiwan view -format=csv -units=atom -prec=8 -idform='{:ee}-{:A}{:m}' PREDICTOR_EOS_step0_mat101.f71 | grep "xe-135,"
+  if "," not in nuclide:
+    nuclide += ','
+  if '-' not in nuclide:
+    raise Exception("Nuclide not in correct format - needs to be in format such as: xe-135")
+  p = subprocess.run(['bash', 'f71_nuclide_dump.sh', filename, str(precision), nuclide],
+                      capture_output = True,
+                      text = True)
+  out = p.stdout
+  nd = float(out.split(',')[-1]) # get number density - works for f71 files that have more than 1 pos - e.g. out = '              xe-135, 1.225176631824E-10, 2.081296201948E-10'
+  return nd

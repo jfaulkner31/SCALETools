@@ -181,7 +181,7 @@ def get_comps_from_std_mix_file(filename):
       parts = line.strip().split()
       nuclide = parts[0]
       dash = nuclide.find('-')
-      nuclide = nuclide[0:dash]+nuclide[dash+1::]
+      nuclide = nuclide[0:dash].lower()+'-'+nuclide[dash+1::] # probably best to keep the dash for consistency?
       mat_id = int(parts[1])
       zero = int(parts[2])
       atomdens = float(parts[3])

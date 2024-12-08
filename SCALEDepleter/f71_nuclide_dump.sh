@@ -1,2 +1,3 @@
 #!/bin/bash
-obiwan view -format=csv -units=atom -prec=8 -idform='{:ee}-{:A}{:m}' "$1"
+
+obiwan view -format=csv -units=atom -prec=$2 -idform='{:ee}-{:A}{:m}' "$1" | grep $3
