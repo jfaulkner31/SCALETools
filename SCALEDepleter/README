@@ -17,3 +17,10 @@ getComps.py
 jupyterToPythonFile.py
 makeAndRunOrigen.py
 runAndKillScale.py
+
+=====================
+OPTIONS FOR DEPLETION
+=====================
+CEBM
+CELI
+CEPE - extremely unstable and still in the works of being developed/worked on

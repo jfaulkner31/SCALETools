@@ -16,7 +16,8 @@ import pickledData
 
 def normalizePower(bos_power: dict, eos_power: dict, previous_substep_power: dict,
                    denomVariableT0: dict, denomVariableT1: dict,
-                   substepX0: dict, substepX1: dict):
+                   substepX0: dict, substepX1: dict,
+                   time: float, interp_time: list):
 
   """
   bos_power (dict): beginning of macro step power
@@ -38,7 +39,14 @@ def normalizePower(bos_power: dict, eos_power: dict, previous_substep_power: dic
     deltaV = denomVariableT1[key] - denomVariableT0[key]
     deltaP = eos_power[key] - bos_power[key]
     ratioDict[key] = deltaP/deltaV
-    new_power_dict_unnormalized[key] = ratioDict[key] * (substepX1[key]-substepX0[key]) + previous_substep_power[key]
+    if abs(1-eos_power[key]/bos_power[key]) < 0.025:
+      interp_power = [bos_power[key], eos_power[key]]
+      new_power_dict_unnormalized[key] = float(np.interp(time, interp_time, interp_power))
+    elif ratioDict[key] > 0.0: # power increases when xenon increases? ---> clearly not due to xenon oscill.
+      interp_power = [bos_power[key], eos_power[key]]
+      new_power_dict_unnormalized[key] = float(np.interp(time, interp_time, interp_power))
+    else:
+      new_power_dict_unnormalized[key] = ratioDict[key] * (substepX1[key]-substepX0[key]) + previous_substep_power[key]
 
   # now renormalize
   new_total = 0.0
@@ -346,6 +354,7 @@ def CEPE(fissionable_mats: list,
     # 4. Go back to 1.
     xenon_by_substeps[step_num] = {}
     power_by_substeps[step_num] = {}
+    interp_time = [0.0, steplength_days_this_step]
 
     for substep_idx, LI_time in enumerate(LI_times):
       # now recalculate power
@@ -361,12 +370,13 @@ def CEPE(fissionable_mats: list,
           xStart = denomVariableT0 # xstart should not be the MC-used xenon value - it should be the xenon value corresponding to the 'corrector' f71 file we did last step
         else:
           xStart = xEnd # sets to last value from previous step number that we got. this way xenon IC is equiv to f71 file in origen - otherwise negative number madness!
-        xenon_by_substeps[0][substep_idx] = xStart # ste to xStart since this dict contains BOS information
+        xenon_by_substeps[step_num][substep_idx] = xStart # ste to xStart since this dict contains BOS information
       else:
         substep_power = normalizePower(bos_power=bos_power, eos_power=eos_power,
                                        previous_substep_power=previous_substep_power,
                                        denomVariableT0=denomVariableT0, denomVariableT1=denomVariableT1,
-                                       substepX0=xStart, substepX1=xEnd)
+                                       substepX0=xStart, substepX1=xEnd,
+                                       time=float(LI_time), interp_time=interp_time)
       # save some data and for next step..
       power_by_substeps[step_num][substep_idx] = substep_power
       previous_substep_power = substep_power # set for next step
