@@ -21,6 +21,41 @@ runAndKillScale.py
 =====================
 OPTIONS FOR DEPLETION
 =====================
-CEBM
+
+=====================
 CELI
+Constant Extrapolator Linear Interpolator
+How it works:
+  Get A0 at t0 using MC
+  Constant extrapolator step: Use A0 to deplete from t0 to t1 - get N1
+  Get A1 at t1 using MC
+  Linear interpolator step: Deplete from t0 to t1 using a linear interpolator between on t0, t1, A0, A1 (based on number of 'substeps')
+  Go to next timestep.
+
+How it works using relaxation factors:
+  Get A0 at t0 using MC
+  Constant extrapolator step: Use A0 to deplete from t0 to t1 - get N1
+  Get A1_0 at t1 using MC
+  For every iteration k; k=0; k++:
+    Linear interpolator step: Deplete from t0 to t1 using a linear interpolator between on t0, t1, A0, A1_k (based on number of 'substeps') = get N1_k+1
+  Averaging step: N_1 =
+  Go to next timestep.
+
+Variables:
+  origen_predictor_divs - this variable controls the number of divisions in the origen calculation. For CRAM methodology typically the accuracy is not strongly dependent on the number of divisions so using a low number - 1 or 2 is rather fine.
+  origen_LI_divs - this is the number of substeps we perform - e.g. how often A0 is interpolated during the
+  relaxation - boolean whether to use relaxation and iteration
+  relaxation_steps - number of steps to use in the scheme
+  relaxation_factor - this is the constant relaxation factor when iterating the linear interpolator
+
+For more information see:
+A simple implicit coupling scheme for Monte Carlo neutronics and isotopic depletion
+=====================
+
+=====================
+CEBM
+=====================
+
+=====================
 CEPE - extremely unstable and still in the works of being developed/worked on
+=====================
