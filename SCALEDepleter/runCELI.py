@@ -31,7 +31,11 @@ steplength_days = [0.125, 0.25, 0.625, 1, 1.125, 1.25, 1.875, 2.5, 2.5, 2.5, 2.5
 
 origen_predictor_divs = 2 # number of time divs for predictor - use for CEBM model and CELI models
 origen_LI_divs = 10 # how many times during origen calculation the f33 is divided - value of 10 means we use 10 interpolated f33 files per material - use for CELI scheme
-origen_steps_per_div = 10 # how many origen substeps are used for each division of f33 files
+origen_steps_per_div = 1 # how many origen substeps are used for each division of f33 files
+
+# Stochastic CELI methods
+corrector_iterations = 1 # for advanced stochastic CELI - how many corrector iterations are done. 1 for basic CELI without any iterations
+relaxation_factor = 0.3 # relaxation factor for stochastic CELI
 
 # File Handles - keep as is - only consider changing the addnux dictionary
 addnuxdictbase = 'addnuxDicts/addnux3Dict.dict'
@@ -40,19 +44,18 @@ origen_base = 'baseOrigenFile.inp'
 origenResults_F71dir = 'OrigenResults_F71dir'
 MonteCarloResults_F33dir = 'MonteCarloResults_F33'
 
-
 ##################################################################
 ########################### EXECUTION ############################
 ##################################################################
 
 # command line args
 import sys
-machinefile = sys.argv[1]
-tmpdir = sys.argv[2]
-Nprocs = int(sys.argv[3])
-# machinefile = 'asdasdasd'
-# tmpdir = 'tmp'
-# Nprocs = 1
+# machinefile = sys.argv[1]
+# tmpdir = sys.argv[2]
+# Nprocs = int(sys.argv[3])
+machinefile = 'asdasdasd'
+tmpdir = 'tmp'
+Nprocs = 1
 
 
 if Nprocs <= 0:
@@ -82,4 +85,6 @@ CELI.CELI(fissionable_mats=fissionable_mats,
           tmpdir=tmpdir,
           is_parallel=is_parallel,
           origen_LI_divs=origen_LI_divs,
-          origen_steps_per_div=origen_steps_per_div)
+          origen_steps_per_div=origen_steps_per_div,
+          corrector_iterations=corrector_iterations,
+          relaxation_factor=relaxation_factor)

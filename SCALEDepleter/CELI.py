@@ -46,7 +46,9 @@ def CELI(fissionable_mats: list,
           tmpdir: str,
           is_parallel: bool,
           origen_LI_divs: int,
-          origen_steps_per_div: int):
+          origen_steps_per_div: int,
+          corrector_iterations: int,
+          relaxation_factor: float):
 
   ##################################################################
   ####################### SANITY CHECKS ############################
@@ -60,7 +62,10 @@ def CELI(fissionable_mats: list,
     raise Exception("Fissionable mat ids and fissionable mat volume lengths do not match.")
   if residual_number_density <= 1e-24:
     raise Exception("Residual number density cannot be less than 1e-24")
-
+  if corrector_iterations <= 0:
+    raise Exception("Corrector iterations must be greater than 1")
+  if relaxation_factor > 1 | relaxation_factor <=0:
+    raise Exception("Relaxation factor is bounded (0,1]")
 
   ##################################################################
   ############################ SETUP ###############################
@@ -124,7 +129,7 @@ def CELI(fissionable_mats: list,
   power_by_step = {}
   keff_lines = []
 
-  # start iteration
+  # start iteration for each burnup step
   for step_num in range(num_steps):
     steplength_days_this_step = steplength_days[step_num]
     specific_power_this_step = specific_power[step_num] * system_IHM_mass_grams / 1e6 # multiply specific power by the amount of tons in system
@@ -135,24 +140,19 @@ def CELI(fissionable_mats: list,
     ################## PREDICTOR - MONTE CARLO ###################
     ##############################################################
 
-    # only run this on step 0 since we already have a transport solution for T0 if step_num > 0
-    if step_num == 0:
-      # STEP 1 - run transport with base file and then copy files from temp dir
-      keff_line = runAndKillScale.runAndKillScale(scale_run_line_c, corrected_triton_input)
-      keff_lines.append(keff_line)
+    # STEP 1 - run transport with base file and then copy files from temp dir
+    keff_line = runAndKillScale.runAndKillScale(scale_run_line_c, corrected_triton_input)
+    keff_lines.append(keff_line)
 
-      # make a folder with all f33's from the tmpdir moved into the new folder - label folder with step number - f33_files is a dict[material_id]
-      f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir)
-      f33_files_bos = f33_files # set bos f33 files
+    # make a folder with all f33's from the tmpdir moved into the new folder - label folder with step number - f33_files is a dict[material_id]
+    f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir, appendThis='_pred')
+    f33_files_bos = f33_files # set bos f33 files
 
-      # get and append power
-      power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
-                                                        include_non_fission_material_power=include_non_fission_material_power,
-                                                        filename=corrected_triton_input, total_power_python=specific_power_this_step)
-    else:
-      # if we are not doing very first step, use f33 files from T1 from previous step
-      f33_files = f33_files_next
-      f33_files_bos = f33_files # bos f33_files
+    # get and append power - this overwrites values from the corrector iteration steps - correct power at T0 for this step
+    power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
+                                                      include_non_fission_material_power=include_non_fission_material_power,
+                                                      filename=corrected_triton_input, total_power_python=specific_power_this_step)
+
     ##############################################################
     ################## PREDICTOR - ORIGEN ########################
     ##############################################################
@@ -199,12 +199,14 @@ def CELI(fissionable_mats: list,
     ################## CORRECTOR - MONTE CARLO ###################
     ##############################################################
 
+    # for ci in range(corrector_iterations): # NEW
+
     # now, we have to run eigenvalue calc after depleting - get f33 at T1
     keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input) # run scale for the 'predicted' triton input
     keff_lines.append(keff_line)
 
     # now copy over the new f33 files
-    f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir)
+    f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir, appendThis='_corr_iter'+'0')
     f33_files_next = f33_files # set f33 files for the BOS for the next step....
     f33_files_eos = f33_files # eos f33 files
 
@@ -275,6 +277,8 @@ def CELI(fissionable_mats: list,
 
     # append coirrected lib to time_lib
     time_lib.append_lib(time=step_end_time, lib=corrected_mat_lib, step=step_num+1, PC_flag='C')
+
+
 
   ##############################################################
   ###################### DATA OUTPUT ###########################
