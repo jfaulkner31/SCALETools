@@ -34,11 +34,11 @@ origen_LI_divs = 10 # how many times during origen calculation the f33 is divide
 origen_steps_per_div = 1 # how many origen substeps are used for each division of f33 files
 
 # Stochastic CELI methods
-corrector_iterations = 1 # for advanced stochastic CELI - how many corrector iterations are done. 1 for basic CELI without any iterations
+corrector_iterations = 3 # for advanced stochastic CELI - how many corrector iterations are done. 1 for basic CELI without any iterations
 relaxation_factor = 0.3 # relaxation factor for stochastic CELI
 
 # File Handles - keep as is - only consider changing the addnux dictionary
-addnuxdictbase = 'addnuxDicts/addnux3Dict.dict'
+addnuxdictbase = 'addnuxDicts/addnux1Dict.dict'
 base_triton = 'triton_base.inp'
 origen_base = 'baseOrigenFile.inp'
 origenResults_F71dir = 'OrigenResults_F71dir'

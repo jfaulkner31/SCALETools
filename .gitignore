@@ -5,10 +5,15 @@ SCALEDepleter/tmp_*/
 SCALEDepleter/*.pkl
 SCALEDepleter/*.out
 SCALEDepleter/*.msg
+SCALEDepleter/*.f33
+SCALEDepleter/*.f71
 SCALEDepleter/OrigenResults_F71dir/
 SCALEDepleter/MonteCarloResults_F33/
 SCALEDepleter/obiwantesting/
+SCALEDepleter/tmp_interpolated/
+SCALEDepleter/tmp_origen_*/
 SCALEDepleter/*.tempdir.path
+SCALEDepleter/blended_CELI_tmp/
 SCALEParser/*/
 SCALEParser/__pycache__/
 .gitkey

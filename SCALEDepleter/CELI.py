@@ -13,6 +13,7 @@ import makeAndRunOrigen
 import removeAndMakeDir
 import powerFromOutput
 import pickledData
+import shutil
 
 """
 Runs a CEBM predictor/corrector scheme.
@@ -64,7 +65,7 @@ def CELI(fissionable_mats: list,
     raise Exception("Residual number density cannot be less than 1e-24")
   if corrector_iterations <= 0:
     raise Exception("Corrector iterations must be greater than 1")
-  if relaxation_factor > 1 | relaxation_factor <=0:
+  if (relaxation_factor > 1.0) | (relaxation_factor <=0.0):
     raise Exception("Relaxation factor is bounded (0,1]")
 
   ##################################################################
@@ -95,9 +96,14 @@ def CELI(fissionable_mats: list,
   removeAndMakeDir.removeAndMakeDir(dirct=origenResults_F71dir, make=True)
   removeAndMakeDir.removeAndMakeDir(dirct='tmp_blender', make=False)
   removeAndMakeDir.removeAndMakeDir(dirct='tmp_interpolated', make=False)
+  removeAndMakeDir.removeAndMakeDir(dirct='blended_CELI_tmp', make=False)
+
   for idx in range(num_steps):
     removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_PREDICTOR_step'+str(idx), make=False)
-    removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_CORRECTOR_step'+str(idx), make=False)
+    for ci in range(corrector_iterations):
+      removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_CORRECTOR_step'+str(idx)+'_corrIter'+str(ci), make=False)
+
+
 
   # we need to add initial nuclides to addnuxdict - addnux dict holds all the addnux nuclides + nuclides defined in the initial material defs
   addnuxdict, new_isotopes_from_addnux = getComps.makeNewAddnuxDict(time_lib.mats_by_steps[0]['C'].material_dict, tmpdir, addnuxdictbase)
@@ -199,84 +205,114 @@ def CELI(fissionable_mats: list,
     ################## CORRECTOR - MONTE CARLO ###################
     ##############################################################
 
-    # for ci in range(corrector_iterations): # NEW
+    origen_f71_locs_all = {} # make empty dict -> origen_f71_locs_all[iteration_num][fiss_mat_id]
+    for ci in range(corrector_iterations):
 
-    # now, we have to run eigenvalue calc after depleting - get f33 at T1
-    keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input) # run scale for the 'predicted' triton input
-    keff_lines.append(keff_line)
+      # now, we have to run eigenvalue calc after depleting - get f33 at T1
+      keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input) # run scale for the 'predicted' triton input
+      keff_lines.append(keff_line)
 
-    # now copy over the new f33 files
-    f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir, appendThis='_corr_iter'+'0')
-    f33_files_next = f33_files # set f33 files for the BOS for the next step....
-    f33_files_eos = f33_files # eos f33 files
+      # now copy over the new f33 files
+      f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir, appendThis='_corrIter'+str(ci))
+      f33_files_eos = f33_files # eos f33 files
 
-    # append power
-    power_by_step[step_num+1] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
-                                                      include_non_fission_material_power=include_non_fission_material_power,
-                                                      filename=predicted_triton_input, total_power_python=specific_power_this_step)
-    ##############################################################
-    ################## CORRECTOR - ORIGEN ########################
-    ##############################################################
+      # append power - progressively updates power as we iterate - OK - does not record power during Stochastic iterations since it overwrites.
+      power_by_step[step_num+1] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
+                                                        include_non_fission_material_power=include_non_fission_material_power,
+                                                        filename=predicted_triton_input, total_power_python=specific_power_this_step)
+      ##############################################################
+      ################## CORRECTOR - ORIGEN ########################
+      ##############################################################
 
-    # we now have both f33 files. need to perform interpolations based on num substeps
-    # origen_LI_divs # number of f33 interpolations
-    # origen_steps_per_div # number of origen timesteps per interpolation
-    dt = steplength_days_this_step / origen_LI_divs # how long averaging step is
-    del_t = dt  / origen_steps_per_div  # how long each microstep is
+      # we now have both f33 files. need to perform interpolations based on num substeps
+      # origen_LI_divs # number of f33 interpolations
+      # origen_steps_per_div # number of origen timesteps per interpolation
+      dt = steplength_days_this_step / origen_LI_divs # how long averaging step is
+      del_t = dt  / origen_steps_per_div  # how long each microstep is
 
-    # get midpoints of the LI steps 0 is BOS and 5 is EOS - get 0.5,1.5,etc.
-    # these are the times we interpolate f33 files to.
-    #   0.5   1.5   2.5   3.5   4.5
-    # |     |     |     |     |     |
-    # 0     1     2     3     4     5
-    LI_ends = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[1:]
-    LI_starts = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[0:-1]
-    LI_times = ( LI_ends + LI_starts ) /2.0
-    start_time = 0.0
-    end_time = start_time + steplength_days_this_step
-    origen_file_list = []
-    origen_tmpdirs = []
-    # now doing origen
-    for idx, fiss_mat_id in enumerate(fissionable_mats):
-      # first make interpolated f33 files.
-      eos_file = f33_files_eos[fiss_mat_id]
-      bos_file = f33_files_bos[fiss_mat_id]
-      filepath = "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id) # folder that holds the interpolated f33 files
-      f33_substep_filepath_list = makeAndRunOrigen.f33Interpolate(filepath=filepath, bos_file=bos_file, eos_file=eos_file, times=LI_times, start_time=start_time, end_time=end_time)
-      bos_mat_lib = time_lib.material_lib_from_step(requested_step=step_num, PC_flag='C')
-      bos_mat_lib_this_mat = bos_mat_lib.material_dict[fiss_mat_id]
-      # interpolated files in "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id)+'/'+substep+str(sumstepInt)+'.f33' ---> tmp_interpolated/step0/mat101/substep0.f33
+      # get midpoints of the LI steps 0 is BOS and 5 is EOS - get 0.5,1.5,etc.
+      # these are the times we interpolate f33 files to.
+      #   0.5   1.5   2.5   3.5   4.5
+      # |     |     |     |     |     |
+      # 0     1     2     3     4     5
+      LI_ends = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[1:]
+      LI_starts = np.linspace(0,steplength_days_this_step,origen_LI_divs+1)[0:-1]
+      LI_times = ( LI_ends + LI_starts ) /2.0
+      start_time = 0.0
+      end_time = start_time + steplength_days_this_step
+      origen_file_list = []
+      origen_tmpdirs = []
 
-      # now make origen files that we are going to run
-      # todo - power_by_step[step_num] or step_num+1 for use in makeOrigenFile for the corrector? it was originalkly step_num+1 but i think i fixed it?
-      origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenCELIFile(fiss_mat_id=fiss_mat_id, step_num=step_num, predictor_corrector_string='CORRECTOR',
-                                                                              f33_substep_filepath_list=f33_substep_filepath_list, origenResults_F71dir=origenResults_F71dir,
-                                                                              LI_starts=LI_starts, LI_ends=LI_ends, dt=dt, del_t=del_t, origen_steps_per_div=origen_steps_per_div,
-                                                                              specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
-                                                                              volume=fissionable_mats_vols[idx], bos_cmp=bos_mat_lib_this_mat)
-      origen_file_list.append(origen_file_handle)
-      origen_tmpdirs.append(origen_tmpdir)
+      # now doing origen
+      for idx, fiss_mat_id in enumerate(fissionable_mats):
+        # first make interpolated f33 files.
+        eos_file = f33_files_eos[fiss_mat_id]
+        bos_file = f33_files_bos[fiss_mat_id]
+        filepath = "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id) # folder that holds the interpolated f33 files
+        f33_substep_filepath_list = makeAndRunOrigen.f33Interpolate(filepath=filepath, bos_file=bos_file, eos_file=eos_file, times=LI_times, start_time=start_time, end_time=end_time, appendThis='_corrIter'+str(ci))
+        bos_mat_lib = time_lib.material_lib_from_step(requested_step=step_num, PC_flag='C')
+        bos_mat_lib_this_mat = bos_mat_lib.material_dict[fiss_mat_id]
+        # interpolated files in "tmp_interpolated/step"+str(step_num)+"/mat"+str(fiss_mat_id)+'/'+substep+str(sumstepInt)+'.f33' ---> tmp_interpolated/step0/mat101/substep0.f33
+
+        # now make origen files that we are going to run
+        # todo - power_by_step[step_num] or step_num+1 for use in makeOrigenFile for the corrector? it was originalkly step_num+1 but i think i fixed it?
+        origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenCELIFile(fiss_mat_id=fiss_mat_id, step_num=step_num, predictor_corrector_string='CORRECTOR',
+                                                                                f33_substep_filepath_list=f33_substep_filepath_list, origenResults_F71dir=origenResults_F71dir,
+                                                                                LI_starts=LI_starts, LI_ends=LI_ends, dt=dt, del_t=del_t, origen_steps_per_div=origen_steps_per_div,
+                                                                                specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
+                                                                                volume=fissionable_mats_vols[idx], bos_cmp=bos_mat_lib_this_mat,
+                                                                                appendThis='_corrIter'+str(ci))
+        origen_file_list.append(origen_file_handle)
+        origen_tmpdirs.append(origen_tmpdir)
 
 
-    # now run origen, unpack isotopics, and then append isotopics to the time_lib
-    corrected_mat_lib = getComps.material_lib()
-    for idx, fiss_mat_id in enumerate(fissionable_mats):
-      # get temp directory for this origen directory
-      temp = origen_tmpdirs[idx]
-      # get origen input
-      origen_inp = origen_file_list[idx]
-      # run origen
-      origen_output_loc = makeAndRunOrigen.runOrigenFile(tmpdir=temp, origen_file=origen_inp, material_id=fiss_mat_id, skipRunning=False)
-      origen_f71_loc = origenResults_F71dir+'/CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+      # now run origen, unpack isotopics, and then append isotopics to the time_lib
+      corrected_mat_lib = getComps.material_lib()
+      origen_f71_locs_all[ci] = {} # make empty dict for storing the location of f71 files for this iteration
 
-      # get std cmp, append it to corrected_mat_lib
-      stdCmpFilename = 'StdCmpMix'+str(fiss_mat_id)+'_corrected_cmp'
-      temperature = time_lib.material_lib_from_step(requested_step=0, PC_flag='C').material_dict[fiss_mat_id].temp # temperature from beginning of simulation for this matid
-      _ = makeStdCmp.makeStdCmpFromF71(materialNumber=fiss_mat_id, temperature=temperature, filename=origen_f71_loc, dictionaryFilename=addnuxdict, outputFilename=stdCmpFilename, tmpdir=tmpdir)
-      corrected_mat_lib.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
+      for idx, fiss_mat_id in enumerate(fissionable_mats):
+        # get temp directory for this origen directory
+        temp = origen_tmpdirs[idx]
+        # get origen input
+        origen_inp = origen_file_list[idx]
+        # run origen
+        origen_output_loc = makeAndRunOrigen.runOrigenFile(tmpdir=temp, origen_file=origen_inp, material_id=fiss_mat_id, skipRunning=False)
+        origen_f71_loc = origenResults_F71dir+'/CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(ci)+'.f71' # OrigenResults_F71dir/corrector_eos_step0_mat101_corrIter2.f71
+        origen_f71_locs_all[ci][fiss_mat_id] = origen_f71_loc
 
-    # append coirrected lib to time_lib
-    time_lib.append_lib(time=step_end_time, lib=corrected_mat_lib, step=step_num+1, PC_flag='C')
+        ##### right here we have to update N for next MC iteration based on all previous iterations - use origen blend function and origen_f71_loc
+
+        # f71 name: '../'+origenResults_F71dir+'/BLENDED'+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+appendThis+'.f71'
+        blended_f71_filename = makeAndRunOrigen.blendCELIOrigenFiles(corrector_iteration=ci, step_num=step_num, fiss_mat_id=fiss_mat_id,
+                                                                     origenResults_F71dir=origenResults_F71dir, predictor_corrector_string='CORRECTOR',
+                                                                     appendThis='_corrIter'+str(ci),
+                                                                     relaxation_factor=relaxation_factor,
+                                                                     origen_f71_locs_all=origen_f71_locs_all)
+
+        # get std cmp filename for next MC run
+        if ci == corrector_iterations - 1: # (last iteration no we have need to setup next corrector iteration)
+          stdCmpFilename = 'StdCmpMix'+str(fiss_mat_id)+'_corrected_cmp' # use a corrected comp for predictor iteration
+        else:
+          stdCmpFilename = 'StdCmpMix'+str(fiss_mat_id)+'_predicted_cmp' # use predicted comp for corrector iteration
+
+        # get temperature for this material id
+        temperature = time_lib.material_lib_from_step(requested_step=0, PC_flag='C').material_dict[fiss_mat_id].temp # temperature from beginning of simulation for this matid
+
+        # make the standard cmp from the f71 - whether next is P or C we are running a calc at T1.
+        _ = makeStdCmp.makeStdCmpFromF71(materialNumber=fiss_mat_id, temperature=temperature, filename=blended_f71_filename, dictionaryFilename=addnuxdict, outputFilename=stdCmpFilename, tmpdir=tmpdir)
+
+        # add to mat lib if this is last iteration
+        if ci == corrector_iterations - 1:
+          corrected_mat_lib.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
+
+        # setup f71 to use as IC in BOS predictor calculation for next step since we are done iterating and supposedly converged
+        if ci == corrector_iterations - 1:
+          shutil.copyfile(blended_f71_filename, origenResults_F71dir+'/'+'CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71')
+
+    # append coirrected lib to time_lib now that we are all done iterating
+    time_lib.append_lib(time=step_end_time, lib=corrected_mat_lib, step=step_num+1, PC_flag='C') # time lib step_num=1 is T1 at step 0
+
+    # TODO now append converged lib to time_lib
 
 
 

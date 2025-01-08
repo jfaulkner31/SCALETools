@@ -6,6 +6,7 @@ import glob
 from getComps import material_normal
 from getComps import material_lib
 import os
+import shutil
 
 def removePattern(pattern):
   files = glob.glob(pattern)
@@ -44,7 +45,7 @@ def makeOrigenFile(origen_base: str, fiss_mat_id: int, f33_files: dict, origenRe
   # if we are not doing the CEBM scheme, blended name is just CORRECTOR_.... since we arent doing blending unless we are doing CEBM
   if no_blended_name: # defaults to corrector_....
     blended_filename = 'CORRECTOR_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
-    blended_filepath = blended_filepath = origenResults_F71dir+'/'+blended_filename
+    blended_filepath = origenResults_F71dir+'/'+blended_filename
   else: # for the CEBM scheme where we use blending to average
     blended_filename = 'BLENDED_EOS_step'+str(step_num-1)+'_mat'+str(fiss_mat_id)+'.f71'
     blended_filepath = origenResults_F71dir+'/'+blended_filename
@@ -144,7 +145,7 @@ def origenBlend(origen_f71_results_dir: str, step_num: int, mat_id: int, blended
   # returns 1 - temp for blender 2 - input file name inside of that temp, 3 - path to f71
   return blender_dir, new_input_name, origen_f71_results_dir+'/BLENDED_EOS_step'+str(step_num)+'_mat'+str(mat_id)+'.f71'
 
-def f33Interpolate(filepath: str, bos_file: str, eos_file: str, times: list, start_time: float, end_time: float):
+def f33Interpolate(filepath: str, bos_file: str, eos_file: str, times: list, start_time: float, end_time: float, appendThis: str):
   """
   f33_files_bos (dict): f33 files for each mat id at the beginning of this step.
   f33_files_eos (dict): f33 files for each mat id at the end of this step.
@@ -153,11 +154,19 @@ def f33Interpolate(filepath: str, bos_file: str, eos_file: str, times: list, sta
   end_time (float): the end time of the current step.
   """
   print("Now interpolating f33 files:", bos_file, '('+str(start_time)+') -> '+ eos_file +'('+str(end_time)+')')
-  mkdir = os.makedirs(filepath)
+
+
+
+
+  try:
+    mkdir = os.makedirs(filepath)
+  except:
+    print("Filepath", filepath, "already created. Not making new directory in", filepath)
+
   f33_substep_filepath_list = []
   for idx, time in enumerate(times):
     print("\tNow doing:", time)
-    f33name = 'substep'+str(idx)+'.f33'
+    f33name = 'substep'+str(idx)+appendThis+'.f33'
     f33path = filepath+'/'+f33name
     f33_substep_filepath_list.append(f33path)
     p = subprocess.run(['bash', 'interp2files.sh', bos_file, eos_file, str(start_time), str(end_time), str(time), f33path],
@@ -177,14 +186,15 @@ def makeOrigenCELIFile(fiss_mat_id: int,
                        origen_steps_per_div: int,
                        specific_power: float,
                        volume: float,
+                       appendThis: str,
                        bos_cmp: material_normal):
   """
   Makes origen files for CE/LI scheme corrector step.
   For the corrector step, we use linear interpolated f33 files for a set number of steps (dt long)
   Inside each of those steps are substeps that are del_t long.
   """
-  # make temp directory for running origen for this step
-  origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)
+  # make temp directory for running origen for this step and this SI iteration
+  origen_tmpdir = 'tmp_origen_'+predictor_corrector_string+'_step'+str(step_num)+appendThis
   if origen_tmpdir not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
     mkdir = subprocess.run(['mkdir', origen_tmpdir])
 
@@ -199,7 +209,7 @@ def makeOrigenCELIFile(fiss_mat_id: int,
   # copy f33 files
   this_file.write('=shell\n')
   for idx, start_time in enumerate(LI_starts):
-    f33name = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+'.f33'
+    f33name = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+appendThis+'.f33'
     this_file.write('  cp '+'$INPDIR/../'+f33_substep_filepath_list[idx]+' '+f33name+'\n')
   this_file.write('end\n')
 
@@ -210,8 +220,8 @@ def makeOrigenCELIFile(fiss_mat_id: int,
       last_idx = True
     else:
       last_idx = False
-    CASETITLE = 'mat'+str(fiss_mat_id)+'_step'+str(step_num)+'_substep'+str(idx)
-    F33_FILEPATH = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+'.f33'
+    CASETITLE = 'mat'+str(fiss_mat_id)+'_step'+str(step_num)+'_substep'+str(idx)+appendThis
+    F33_FILEPATH = 'mat'+str(fiss_mat_id)+'_substep'+str(idx)+appendThis+'.f33'
 
     TIME_VECTOR = [0]
     dt_vec = [del_t]*origen_steps_per_div # [del_t] -> [delt delt delt ...]
@@ -248,7 +258,7 @@ def makeOrigenCELIFile(fiss_mat_id: int,
       this_file.write('    previous=LAST\n')
       this_file.write('  }\n')
     if last_idx:
-      EOS_OUTPUT_F71_FILE =  '../'+origenResults_F71dir+'/'+predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+      EOS_OUTPUT_F71_FILE =  '../'+origenResults_F71dir+'/'+predictor_corrector_string+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+appendThis+'.f71'
       this_file.write('  save{ file="'+EOS_OUTPUT_F71_FILE+'"\n    steps=[LAST]\n  }\n')
     this_file.write('}\n')
 
@@ -258,6 +268,74 @@ def makeOrigenCELIFile(fiss_mat_id: int,
 
   origen_input = file_handle
   return origen_input, origen_tmpdir
+
+def blendCELIOrigenFiles(origen_f71_locs_all: dict,
+                         corrector_iteration: int, step_num: int, fiss_mat_id: int,
+                         origenResults_F71dir: str, predictor_corrector_string: str, appendThis: str,
+                         relaxation_factor: float):
+  """
+  Blends and runs CELI Origen files based on current iteration and previous iteration with relaxation.
+  Used to calculatee average of all previous iterations for next MC step.
+  If corrector_iteration = 0 then we basically do nothing and just copy the f71 from the 0'th corrector run instead of blending
+
+  N(T1)_k+1 = (1-alpha)*N(T1)_k + alpha * N(T1)_k+1
+  N(T1)_k+1 = (1-alpha)*prev_guess + alpha*this_guess -> alpha = blending factor
+
+  """
+
+  SAVE_F71_LOC = '../'+origenResults_F71dir+'/BLENDED'+'_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+appendThis+'.f71'
+
+  tmp = 'blended_CELI_tmp'
+  if tmp not in [entry.name for entry in os.scandir('.') if entry.is_file()]:
+    mkdir = subprocess.run(['mkdir', tmp])
+
+  input_filename = 'blended_CELI_maker.inp'
+  this_file = open(tmp+'/'+input_filename, 'w', encoding="utf-8")
+
+  this_file.write('=shell\n')
+  for _, idx in enumerate([corrector_iteration-1, corrector_iteration]):
+    f71_name_in_this_file = 'blended_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(idx)+'.f71'
+    if idx >= 0:
+      COPY_LINE = '\tcp ../'+ origen_f71_locs_all[idx][fiss_mat_id] + ' ' + f71_name_in_this_file
+    else:
+      COPY_LINE = 'NEGATIVE_IDX_NO_COPY'
+    this_file.write(COPY_LINE+'\n')
+  this_file.write('end\n')
+
+  this_file.write('=origen\n')
+  for pos, idx in enumerate([corrector_iteration-1, corrector_iteration]):
+
+    f71_name_in_this_file = 'blended_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(idx)+'.f71'
+
+    this_file.write('case(b'+str(pos)+') { '+'\n')
+    if pos == 0:
+      this_file.write('\tlib{file="end7dec" pos=1}'+'\n')
+    this_file.write('\ttime{ units=SECONDS t=[1e-20] }'+'\n')
+    this_file.write('\tmat{ load{ file="' + f71_name_in_this_file + '" pos=1 } }'+'\n')
+    this_file.write('}'+'\n')
+
+  this_file.write('case(blend){'+'\n')
+  this_file.write('\ttime{ units=SECONDS t=[1e-20] }'+'\n')
+  BLENDED_LINE = '\tmat{ blend=[ b0='+str(1-relaxation_factor)+' b1='+str(relaxation_factor)
+  BLENDED_LINE += ' ] }'
+  this_file.write(BLENDED_LINE+'\n')
+  this_file.write('\tsave{file="'+SAVE_F71_LOC+'" steps=[LAST]}\n}\nend' +'\n')
+
+
+  this_file.close()
+
+  # if corrector iteration is 0 then we dont run blended since theres only a single f71
+  if corrector_iteration == 0:
+    BLENDED_F71_LOC = origen_f71_locs_all[idx][fiss_mat_id]
+    shutil.copyfile(BLENDED_F71_LOC, SAVE_F71_LOC[3:]) # copies file to
+  else:
+    origen_output_loc = runOrigenFile(origen_file=input_filename, tmpdir=tmp, material_id=fiss_mat_id, skipRunning=False)
+    BLENDED_F71_LOC = SAVE_F71_LOC[3:]
+
+  return BLENDED_F71_LOC
+
+
+
 
 def makeOrigenCEPEFile(fission_mat_ids: list,
                        substep_power: dict,
