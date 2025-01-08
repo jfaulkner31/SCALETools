@@ -14,6 +14,7 @@ import removeAndMakeDir
 import powerFromOutput
 import pickledData
 import shutil
+import results_data
 
 """
 Runs a CEBM predictor/corrector scheme.
@@ -87,9 +88,36 @@ def CELI(fissionable_mats: list,
   # Get materials at time 0 and append
   time_lib = getComps.time_dependent_material_lib()
   fh = open(base_triton, 'r')
-  initial_mats = getComps.get_comps(fh)
+  initial_mats = getComps.get_comps(fh) # returns a matlib
   fh.close()
   time_lib.append_lib(initial_mats, time=0.0, step=int(0), PC_flag='C') # C flag since it is the "true" solution
+
+  # make a results lib specifically made for CELI results
+  celi_results_lib = results_data.ResultsCELI(
+              fissionable_mats=fissionable_mats,
+              fissionable_mats_vols=fissionable_mats_vols,
+              residual_number_density=residual_number_density,
+              include_non_fission_material_power=include_non_fission_material_power,
+              print_transport_powers=print_transport_powers,
+              system_IHM_mass_grams=system_IHM_mass_grams,
+              specific_power=specific_power,
+              steplength_days=steplength_days,
+              origen_predictor_divs=origen_predictor_divs,
+              addnuxdictbase=addnuxdictbase,
+              base_triton=base_triton,
+              origen_base=origen_base,
+              origenResults_F71dir=origenResults_F71dir,
+              MonteCarloResults_F33dir=MonteCarloResults_F33dir,
+              Nprocs=Nprocs,
+              machinefile=machinefile,
+              tmpdir=tmpdir,
+              is_parallel=is_parallel,
+              origen_LI_divs=origen_LI_divs,
+              origen_steps_per_div=origen_steps_per_div,
+              corrector_iterations=corrector_iterations,
+              relaxation_factor=relaxation_factor,
+              case_name=case_name)
+
 
   # completely remove and remake some directories - since we are makign a new case
   removeAndMakeDir.removeAndMakeDir(dirct=tmpdir, make=True)
@@ -114,6 +142,9 @@ def CELI(fissionable_mats: list,
   for iso in new_isotopes_from_addnux:
     mat_lib = time_lib.mats_by_steps[0]['C']
     mat_lib.add_residual_isotope(isotope=iso, numdens=residual_number_density)
+
+  # append IC results for CELI datakeeping
+  celi_results_lib.append_isotopics_data(step_num=0, iteration_num=-1, matlib=mat_lib)
 
   # make a base triton scale input with flags for stdcmp - make for predicted and corrected stdcmps
   corrected_triton_input = makeTritonFile.makeTritonFile(base_triton, fissionable_mats, stdcmp_tag='corrected_cmp') # uses "corrcted" stdcmp material defs
@@ -149,8 +180,14 @@ def CELI(fissionable_mats: list,
     ##############################################################
 
     # STEP 1 - run transport with base file and then copy files from temp dir
+    # this part runs MC at BOS - the correct MC solution for the beginning of this step
+    # since it comes either from IC nuclide density or a nuclide density converged
+    # at the corrector at the previous steps EOS convergence procedure
     keff_line = runAndKillScale.runAndKillScale(scale_run_line_c, corrected_triton_input)
     keff_lines.append(keff_line)
+
+    # append results to celi mat lib
+    celi_results_lib.append_keff_data(step_num=step_num, iteration_num=-1, keff_line=keff_line)
 
     # make a folder with all f33's from the tmpdir moved into the new folder - label folder with step number - f33_files is a dict[material_id]
     f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir, appendThis='_pred')
@@ -209,10 +246,14 @@ def CELI(fissionable_mats: list,
 
     origen_f71_locs_all = {} # make empty dict -> origen_f71_locs_all[iteration_num][fiss_mat_id]
     for ci in range(corrector_iterations):
+      mat_lib_this_step = getComps.material_lib()
 
       # now, we have to run eigenvalue calc after depleting - get f33 at T1
       keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input) # run scale for the 'predicted' triton input
       keff_lines.append(keff_line)
+
+      # append celi results for datakeeping
+      celi_results_lib.append_keff_data(step_num=step_num, iteration_num=ci, matlib=mat_lib)
 
       # now copy over the new f33 files
       f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir, appendThis='_corrIter'+str(ci))
@@ -270,6 +311,7 @@ def CELI(fissionable_mats: list,
 
       # now run origen, unpack isotopics, and then append isotopics to the time_lib
       corrected_mat_lib = getComps.material_lib()
+
       origen_f71_locs_all[ci] = {} # make empty dict for storing the location of f71 files for this iteration
 
       for idx, fiss_mat_id in enumerate(fissionable_mats):
@@ -303,6 +345,9 @@ def CELI(fissionable_mats: list,
         # make the standard cmp from the f71 - whether next is P or C we are running a calc at T1.
         _ = makeStdCmp.makeStdCmpFromF71(materialNumber=fiss_mat_id, temperature=temperature, filename=blended_f71_filename, dictionaryFilename=addnuxdict, outputFilename=stdCmpFilename, tmpdir=tmpdir)
 
+        # append the blended material lib for this iteration and this maetrial
+        mat_lib_this_step.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
+
         # add to mat lib if this is last iteration
         if ci == corrector_iterations - 1:
           corrected_mat_lib.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
@@ -311,8 +356,17 @@ def CELI(fissionable_mats: list,
         if ci == corrector_iterations - 1:
           shutil.copyfile(blended_f71_filename, origenResults_F71dir+'/'+'CORRECTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71')
 
+      # once all materials are done - append for record keeping for celi data at this iteration
+      celi_results_lib.append_isotopics_data(iteration_num=ci, step_num=step_num, matlib=corrected_mat_lib)
+
     # append coirrected lib to time_lib now that we are all done iterating
     time_lib.append_lib(time=step_end_time, lib=corrected_mat_lib, step=step_num+1, PC_flag='C') # time lib step_num=1 is T1 at step 0
+
+    # append final lib at BOS for next step for celi data storage
+    celi_results_lib.append_isotopics_data(iteration_num=-1, step_num=step_num+1, matlib=corrected_mat_lib)
+
+    # write all data in this state to pkl file
+    celi_results_lib.write_state_to_pkl(step_num, is_final=False)
 
     # TODO now append converged lib to time_lib
 
@@ -321,6 +375,9 @@ def CELI(fissionable_mats: list,
   ##############################################################
   ###################### DATA OUTPUT ###########################
   ##############################################################
+
+  # writes final output as pkl file
+  celi_results_lib.write_state_to_pkl(step_num=1, is_final=True)
 
 
   for line in keff_lines:
