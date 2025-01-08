@@ -12,6 +12,9 @@
   To run via python command line: python ...py machinefile tmpdir numProcsTransport
 """
 
+# case name
+case_name = 'testing123'
+
 # fissionable regions - used for origen later
 fissionable_mats = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116] # list of fissionable materials we are depleting -
 fissionable_mats_vols = [6.02834870915574000000E+04]*16 # list of vols for each fissionable material
@@ -87,4 +90,5 @@ CELI.CELI(fissionable_mats=fissionable_mats,
           origen_LI_divs=origen_LI_divs,
           origen_steps_per_div=origen_steps_per_div,
           corrector_iterations=corrector_iterations,
-          relaxation_factor=relaxation_factor)
+          relaxation_factor=relaxation_factor,
+          case_name=case_name)

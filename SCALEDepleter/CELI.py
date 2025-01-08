@@ -49,7 +49,8 @@ def CELI(fissionable_mats: list,
           origen_LI_divs: int,
           origen_steps_per_div: int,
           corrector_iterations: int,
-          relaxation_factor: float):
+          relaxation_factor: float,
+          case_name: str):
 
   ##################################################################
   ####################### SANITY CHECKS ############################
@@ -97,6 +98,7 @@ def CELI(fissionable_mats: list,
   removeAndMakeDir.removeAndMakeDir(dirct='tmp_blender', make=False)
   removeAndMakeDir.removeAndMakeDir(dirct='tmp_interpolated', make=False)
   removeAndMakeDir.removeAndMakeDir(dirct='blended_CELI_tmp', make=False)
+  removeAndMakeDir.removeAndMakeDir(dirct='CASE_'+case_name, make=True)
 
   for idx in range(num_steps):
     removeAndMakeDir.removeAndMakeDir(dirct='tmp_origen_PREDICTOR_step'+str(idx), make=False)
