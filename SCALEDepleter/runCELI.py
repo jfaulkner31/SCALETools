@@ -9,7 +9,7 @@
   Are the NPG and other neutron parameters correct?
   Is addnux set to 0 in the triton base file?
 
-  To run via python command line: python ...py machinefile tmpdir numProcsTransport
+  To run via python command line: python <thisFileName>.py machinefile tmpdir numProcsTransport
 """
 
 # case name
@@ -68,7 +68,7 @@ elif Nprocs == 1:
 else:
   is_parallel = True
 
-import CELI
+from SCALEDepleter import CELI
 CELI.CELI(fissionable_mats=fissionable_mats,
           fissionable_mats_vols=fissionable_mats_vols,
           residual_number_density=residual_number_density,
