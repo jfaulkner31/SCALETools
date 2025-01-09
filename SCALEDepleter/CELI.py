@@ -372,7 +372,7 @@ def CELI(fissionable_mats: list,
     celi_results_lib.append_isotopics_data(iteration_num=-1, step_num=step_num+1, matlib=corrected_mat_lib)
 
     # write all data in this state to pkl file before EOS
-    celi_results_lib.write_state_to_pkl(step_num, is_final=False)
+    celi_results_lib.write_state_to_pkl(step_num, is_final=False, folder='CASE_'+case_name)
 
     # TODO now append converged lib to time_lib
 
@@ -383,7 +383,7 @@ def CELI(fissionable_mats: list,
   ##############################################################
 
   # writes final output as pkl file
-  celi_results_lib.write_state_to_pkl(step_num='asdasd', is_final=True)
+  celi_results_lib.write_state_to_pkl(step_num='asdasd', is_final=True, folder='CASE_'+case_name)
 
 
   for line in keff_lines:

@@ -91,19 +91,19 @@ class ResultsCELI:
     if iteration_num == -1:
       self.BOS_power[step_num] = power_data_block
 
-  def write_state_to_pkl(self, step_num, is_final):
+  def write_state_to_pkl(self, step_num, is_final, folder):
     # removes old savestate and writes new one
     if is_final:
       print("\n\nWriting pkl state for final results...")
       name = self.case_settings['case_name']
-      with open(name+'_FINAL_.pkl', 'wb') as file:
+      with open(folder+'/'+name+'_FINAL_.pkl', 'wb') as file:
         pickle.dump(self, file)
 
 
     else:
       print("\n\nWriting pkl state for step_num....", step_num)
       name = self.case_settings['case_name']
-      with open(name+'_upTo_stepNum_'+str(step_num)+'.pkl', 'wb') as file:
+      with open(folder+'/'+name+'_upTo_stepNum_'+str(step_num)+'.pkl', 'wb') as file:
         pickle.dump(self, file)
 
       print("Removing pkl state for step_num", step_num-1)
