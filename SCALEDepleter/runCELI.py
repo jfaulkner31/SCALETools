@@ -53,12 +53,12 @@ MonteCarloResults_F33dir = 'MonteCarloResults_F33'
 
 # command line args
 import sys
-# machinefile = sys.argv[1]
-# tmpdir = sys.argv[2]
-# Nprocs = int(sys.argv[3])
-machinefile = 'asdasdasd'
-tmpdir = 'tmp'
-Nprocs = 1
+machinefile = sys.argv[1]
+tmpdir = sys.argv[2]
+Nprocs = int(sys.argv[3])
+# machinefile = 'asdasdasd'
+# tmpdir = 'tmp'
+# Nprocs = 1
 
 
 if Nprocs <= 0:
