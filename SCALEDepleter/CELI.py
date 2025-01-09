@@ -69,6 +69,8 @@ def CELI(fissionable_mats: list,
     raise Exception("Corrector iterations must be greater than 1")
   if (relaxation_factor > 1.0) | (relaxation_factor <=0.0):
     raise Exception("Relaxation factor is bounded (0,1]")
+  if (origen_predictor_divs < 2):
+    raise Exception("Origen predictor divs must be 2 or more - 2 reccomended since CRAM methodology is being used and CRAM accuracy is not strongly related to timestep size.")
 
   ##################################################################
   ############################ SETUP ###############################

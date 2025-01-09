@@ -23,7 +23,7 @@ fissionable_mats_vols = [6.02834870915574000000E+04]*16 # list of vols for each 
 residual_number_density = 1e-20 # residual number density for trace nuclides in initial conditions
 include_non_fission_material_power = True # include power effects from non-fissionable materials?
 print_transport_powers = True  # print powers after every transport step?
-system_IHM_mass_grams = 7.213356e+04 # heavy metal mass in grams i the initial system - the ENTIRE system.
+system_IHM_mass_grams = 7.213356e+04 # heavy metal mass in grams i the initial system - the ENTIRE system. -- ctrl+f: System total mass is
 specific_power = [200]*145 # MW/TIHM
 steplength_days = [0.125, 0.25, 0.625, 1, 1.125, 1.25, 1.875, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
 		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
@@ -32,9 +32,9 @@ steplength_days = [0.125, 0.25, 0.625, 1, 1.125, 1.25, 1.875, 2.5, 2.5, 2.5, 2.5
 		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
 		2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 1.25]
 
-origen_predictor_divs = 2 # number of time divs for predictor - use for CEBM model and CELI models
+origen_predictor_divs = 2 # number of time divs for predictor - use for CEBM model and CELI models must be >= 2
 origen_LI_divs = 10 # how many times during origen calculation the f33 is divided - value of 10 means we use 10 interpolated f33 files per material - use for CELI scheme
-origen_steps_per_div = 1 # how many origen substeps are used for each division of f33 files
+origen_steps_per_div = 1 # how many origen substeps are used for each division of f33 files in the CELI scheme
 
 # Stochastic CELI methods
 corrector_iterations = 3 # for advanced stochastic CELI - how many corrector iterations are done. 1 for basic CELI without any iterations
@@ -68,7 +68,7 @@ elif Nprocs == 1:
 else:
   is_parallel = True
 
-import CELI
+from SCALEDepleter import CELI
 CELI.CELI(fissionable_mats=fissionable_mats,
           fissionable_mats_vols=fissionable_mats_vols,
           residual_number_density=residual_number_density,
