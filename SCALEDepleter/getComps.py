@@ -44,6 +44,9 @@ class material_normal:
       idx = lower_list.index(lower_iso)
       return self.atom_dens[idx]
     except:
+      print("Available isotopes are:")
+      for i in self.isotope_list:
+        print(i)
       raise Exception("Requested isotope "+iso+" not found!")
 
 
