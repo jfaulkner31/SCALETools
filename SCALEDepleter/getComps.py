@@ -157,7 +157,7 @@ def get_comps(file):
 
       # make new material def
       new = material_normal()
-      new.isotope_list = isotope
+      new.isotope_list = [isotope]
       new.mat_id = mat_id
       new.biasid = dummy
       new.atom_dens = dens
@@ -220,7 +220,13 @@ def makeNewAddnuxDict(zeromatdict, tmpdir, addnuxdict):
   for key in zero_mat_dict.keys():
     iso_list = zero_mat_dict[key].isotope_list
     for isotope in iso_list:
-      _1, _2, new_iso = split_isotope(isotope) # returns proper format as variable new_iso li6 -> li-6
+      try:
+        _1, _2, new_iso = split_isotope(isotope) # returns proper format as variable new_iso li6 -> li-6
+      except:
+        if isotope.lower() == 'graphite':
+          new_iso = isotope
+        else:
+          raise Exception("Isotope with name '" + isotope + "' is unknown currently. Make sure to add exception like graphite if needed.")
       if new_iso.lower() not in extraAddnuxIsotopes:
         extraAddnuxIsotopes.append(new_iso.lower())
 

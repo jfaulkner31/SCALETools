@@ -56,9 +56,9 @@ import sys
 machinefile = sys.argv[1]
 tmpdir = sys.argv[2]
 Nprocs = int(sys.argv[3])
-# machinefile = 'asdasdasd'
-# tmpdir = 'tmp'
-# Nprocs = 1
+#machinefile = 'asdasdasd'
+#tmpdir = 'tmp'
+#Nprocs = 1
 
 
 if Nprocs <= 0:
@@ -68,7 +68,7 @@ elif Nprocs == 1:
 else:
   is_parallel = True
 
-from SCALEDepleter import CELI
+import CELI
 CELI.CELI(fissionable_mats=fissionable_mats,
           fissionable_mats_vols=fissionable_mats_vols,
           residual_number_density=residual_number_density,
