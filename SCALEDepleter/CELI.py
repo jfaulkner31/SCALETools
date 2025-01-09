@@ -189,6 +189,7 @@ def CELI(fissionable_mats: list,
     # append results to celi mat lib
     celi_results_lib.append_keff_data(step_num=step_num, iteration_num=-1, keff_line=keff_line)
 
+
     # make a folder with all f33's from the tmpdir moved into the new folder - label folder with step number - f33_files is a dict[material_id]
     f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num, mcf33dir=MonteCarloResults_F33dir, appendThis='_pred')
     f33_files_bos = f33_files # set bos f33 files
@@ -197,6 +198,8 @@ def CELI(fissionable_mats: list,
     power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
                                                       include_non_fission_material_power=include_non_fission_material_power,
                                                       filename=corrected_triton_input, total_power_python=specific_power_this_step)
+    # for celi results data storage
+    celi_results_lib.append_power_data(step_num=step_num, iteration_num=-1, power_data_block=power_by_step[step_num])
 
     ##############################################################
     ################## PREDICTOR - ORIGEN ########################
@@ -253,7 +256,7 @@ def CELI(fissionable_mats: list,
       keff_lines.append(keff_line)
 
       # append celi results for datakeeping
-      celi_results_lib.append_keff_data(step_num=step_num, iteration_num=ci, matlib=mat_lib)
+      celi_results_lib.append_keff_data(step_num=step_num, iteration_num=ci, keff_line=keff_line)
 
       # now copy over the new f33 files
       f33_files = copyMatAndF33Files.copy_files_from_temp(tmpdir=tmpdir, step_num=step_num+1, mcf33dir=MonteCarloResults_F33dir, appendThis='_corrIter'+str(ci))
@@ -263,6 +266,9 @@ def CELI(fissionable_mats: list,
       power_by_step[step_num+1] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
                                                         include_non_fission_material_power=include_non_fission_material_power,
                                                         filename=predicted_triton_input, total_power_python=specific_power_this_step)
+
+      celi_results_lib.append_power_data(step_num=step_num, iteration_num=ci, power_data_block=power_by_step[step_num+1])
+
       ##############################################################
       ################## CORRECTOR - ORIGEN ########################
       ##############################################################
@@ -365,7 +371,7 @@ def CELI(fissionable_mats: list,
     # append final lib at BOS for next step for celi data storage
     celi_results_lib.append_isotopics_data(iteration_num=-1, step_num=step_num+1, matlib=corrected_mat_lib)
 
-    # write all data in this state to pkl file
+    # write all data in this state to pkl file before EOS
     celi_results_lib.write_state_to_pkl(step_num, is_final=False)
 
     # TODO now append converged lib to time_lib
@@ -377,7 +383,7 @@ def CELI(fissionable_mats: list,
   ##############################################################
 
   # writes final output as pkl file
-  celi_results_lib.write_state_to_pkl(step_num=1, is_final=True)
+  celi_results_lib.write_state_to_pkl(step_num='asdasd', is_final=True)
 
 
   for line in keff_lines:

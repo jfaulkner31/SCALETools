@@ -61,6 +61,8 @@ class ResultsCELI:
     self.BOS_keff_lines = {} # correct keff at BOS for each real step
     self.isotopics_all = {} # isotopics by steps and also by corrector iterations
     self.BOS_isotopics = {} # correct isotopics at BOS for each real step
+    self.power_all = {}
+    self.BOS_power = {}
   def append_isotopics_data(self, step_num, iteration_num, matlib):
     try:
       self.isotopics_all[step_num]
@@ -79,6 +81,15 @@ class ResultsCELI:
     # if predictor iteration
     if iteration_num == -1:
       self.BOS_keff_lines[step_num] = keff_line
+
+  def append_power_data(self, power_data_block, step_num, iteration_num):
+    try:
+      self.power_all[step_num]
+    except:
+      self.power_all[step_num] = {}
+    self.power_all[step_num][iteration_num] = power_data_block
+    if iteration_num == -1:
+      self.BOS_power[step_num] = power_data_block
 
   def write_state_to_pkl(self, step_num, is_final):
     # removes old savestate and writes new one
