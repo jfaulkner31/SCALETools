@@ -68,7 +68,7 @@ elif Nprocs == 1:
 else:
   is_parallel = True
 
-from SCALEDepleter import CELI
+import CELI
 CELI.CELI(fissionable_mats=fissionable_mats,
           fissionable_mats_vols=fissionable_mats_vols,
           residual_number_density=residual_number_density,

@@ -1,5 +1,7 @@
 import subprocess
 from getComps import material_lib
+import shutil
+import os
 
 def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, dictionaryFilename: str, outputFilename: str, tmpdir: str):
   """
@@ -11,6 +13,8 @@ def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, di
   outputFilename = output name of the created stdcmp library
   """
 
+  # scaleDepleterPath = os.path.dirname(os.path.realpath(__file__))
+
   print("Now making standard comp file for material", materialNumber, " | output=", outputFilename)
   # rm = subprocess.run(['rm', outputFilename])
   origenrun = subprocess.run(["bash", "f71_to_comp.sh", str(materialNumber), str(temperature), filename, dictionaryFilename, outputFilename],
@@ -18,8 +22,10 @@ def makeStdCmpFromF71(materialNumber: int, temperature: float, filename: str, di
                              stderr=subprocess.STDOUT)
   print("Stdcmp file with name", outputFilename, 'was successfully made!')
 
-  cp = subprocess.run(['cp', outputFilename, tmpdir+'/'+outputFilename])
-  rm = subprocess.run(['rm', outputFilename])
+  # cp = subprocess.run(['cp', outputFilename, tmpdir+'/'+outputFilename])
+  # rm = subprocess.run(['rm', outputFilename])
+
+  shutil.move(outputFilename, tmpdir+'/'+outputFilename)
   return
 
 def makeStdCmpFromMatLib(outputFilename: str, material_lib: material_lib, material_index: int, tmpdir: str):

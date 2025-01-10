@@ -5,9 +5,7 @@
 # copy this folder to one youd like to setup a calculation/case in.
 # then run this folder:
 # bash setupSCALEDepleter.sh
-# may need to also export SCALEDepleter into the python path when you are done.
 
-# WARNING - deleters entire SCALEDepleter folder - only use if absolutely necessary or if starting out for the first time.
 rm -fr SCALETools
 rm -fr SCALEDepleter
 rm -fr celiCalculationInput.py
@@ -19,19 +17,14 @@ git sparse-checkout set SCALEDepleter
 git pull origin main
 cd ../
 cp -r SCALETools/SCALEDepleter SCALEDepleter
+cp -r SCALEDepleter/* .
 rm -fr SCALETools
+rm -fr SCALEDepleter
 
 echo ' '
-echo 'Now setting up python path...'
-echo ' '
-echo 'You may need to add the following line manually in the bashrc, or rerun the export line for every terminal you open'
-echo 'export PYTHONPATH=~/projects/semiImplicitBurnup/SCALEDepleter:$PYTHONPATH'
-export PYTHONPATH=~/projects/semiImplicitBurnup/SCALEDepleter:$PYTHONPATH
+echo 'Now copying input file for SCALEDepleter as _INPUT_FILE_.py'
+cp runCELI.py _INPUT_FILE_.py
 
 echo ' '
-echo 'Now copying input file for SCALEDepleter as celiCalculationInput.py'
-cp SCALEDepleter/runCELI.py celiCalculationInput.py
-
-echo ' '
-echo 'All done!'
+echo 'All done! Now work through _INPUT_FILE_.py to begin your case'
 echo ' '
