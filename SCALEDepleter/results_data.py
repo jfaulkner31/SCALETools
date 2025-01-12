@@ -146,6 +146,12 @@ class ResultsCELI:
     print("out.get_BOS_power()")
     print("out.get_corrector_keffs()")
     print("out.get_BOS_AO")
+    print("")
+    print("Plotting:")
+    print("out.plot_BOS_power_map")
+    print("out.plot_BOS_power_2d")
+    print("out.plot_all_power_map")
+    print("")
     print("\n\nneed to make the following still")
     print("out.get_corrector_power()")
     print("out.get_corrector_isotope()")
@@ -229,6 +235,28 @@ class ResultsCELI:
 
     return BOS_BU, BOS_time, ao
 
+  def get_all_AO(self):
+    ao = np.array([])
+    for idx, key in enumerate(self.power_all.keys()): # each key is a timestep
+      for substepIdx, substepKey in enumerate(self.power_all[key].keys()):
+
+        this_powers = self.power_all[key][substepKey]
+        mat_ids = this_powers.keys()
+        numkeys = len(mat_ids)
+        bottom = 0.0
+        top = 0.0
+        for z, id in enumerate(mat_ids):
+          this_power = self.power_all[key][substepKey][id]
+          if z < numkeys/2:
+            bottom += this_power
+          else:
+            top += this_power
+        this_ao = (top - bottom) / (top+bottom)
+        ao = np.append(ao, this_ao)
+
+    x=np.linspace(1,np.size(ao), np.size(ao))
+    return x, ao
+
   def get_corrector_keffs(self, step_num):
     """
     Returns the corrector-iterated keffs for the T0 value for this step.
@@ -263,7 +291,11 @@ class ResultsCELI:
 
     return keffs, sigmas
 
-  def plot_BOS_power(self, figsize: tuple, normalize: bool, fontsize=14, fontname='Cambria'):
+  def plot_BOS_power_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
+    """
+    Plots BOS power data as a mesh - this is the BOS value from the predictor MC calculation at T0 using
+    either IC's or nuclides that were converged by a series of corrector iterations.
+    """
     BOS_BU, BOS_time, power_dict = self.get_BOS_power()
 
     # materials
@@ -288,10 +320,84 @@ class ResultsCELI:
       # see runCELI.py input option - include_non_fission_material_power
       parr = parr / np.sum(parr, axis=0)
 
+    # colors
+    cmap = plt.colormaps[cmap]
+
 
     # now make pcolormesh
     fig, ax = plt.subplots(figsize=figsize)
-    c = ax.pcolormesh(BOS_time, mats, parr)
+    c = ax.pcolormesh(BOS_time, mats, parr, cmap=cmap)
+
+    # colorbar
+    if normalize:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label('Power (normalized to unity)',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+    else:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label('Power fraction',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+
+    # other
+    ax.set_xlabel('Time (days)',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    ax.set_ylabel('Material ID',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    # make black lines on x axis
+    time_widths = BOS_time[1:] - BOS_time[0:-1]
+    for idx, x in enumerate(BOS_time[1:]):
+      ax.axvline(x=x-time_widths[idx]/2, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks
+    return parr, BOS_time
+
+
+  def plot_all_power_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
+    """
+    Plots all power data as a mesh.
+    """
+
+    all_power_steps = {}
+    idx = 0
+    for bigStep in self.power_all.keys():
+      for substep in self.power_all[bigStep].keys():
+        all_power_steps[idx] = self.power_all[bigStep][substep]
+        idx += 1
+
+
+    # materials
+    mats = all_power_steps[0].keys()
+
+
+
+    # first make array for power:
+    parr = np.array([])
+    for materialKey in all_power_steps[0].keys():
+      mat_vs_time = []
+      for timestepKey in all_power_steps.keys():
+        p = all_power_steps[timestepKey][materialKey]
+        mat_vs_time.append(p)
+      try:
+        parr = np.vstack((parr, mat_vs_time))
+      except:
+        parr = mat_vs_time
+
+    # normalize power if requested
+    if normalize:
+      # power is either normalied to 1.0 from this or the power fraction as returned by scale.
+      # power fraction not always 1.0 since gamma heating accounted for in nonfissile materials as well.
+      # see runCELI.py input option - include_non_fission_material_power
+      parr = parr / np.sum(parr, axis=0)
+
+    # colors
+    cmap = plt.colormaps[cmap]
+    # now make pcolormesh
+    fig, ax = plt.subplots(figsize=figsize)
+    c = ax.pcolormesh(all_power_steps.keys(), mats, parr, cmap=cmap)
 
     # colorbar
     if normalize:
@@ -313,9 +419,133 @@ class ResultsCELI:
     ax.set_ylabel('Material ID',
                   fontdict={'fontsize': fontsize,
                             'fontname': fontname})
+
+    # make black lines on x axis
+    time_widths = len(self.power_all[0])
+    ax.axvline(x=0.5, color='black', linestyle='-', alpha=0.3) # make line at x=1
+    for idx, x in enumerate(self.power_all.keys()):
+      ax.axvline(x=1+x*time_widths-0.5, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks separating burnup steps
     return parr
 
 
+
+  def plot_BOS_power_2d(self, figsize: tuple, normalize: bool, fontsize=14, fontname='Cambria'):
+    """
+    Plots BOS power data as a xy plot - this is the BOS value from the predictor MC calculation at T0 using
+    either IC's or nuclides that were converged by a series of corrector iterations.
+    """
+    BOS_BU, BOS_time, power_dict = self.get_BOS_power()
+
+    # materials
+    mats = power_dict[0].keys()
+
+    # first make array for power:
+    parr = np.array([])
+    for materialKey in power_dict[0].keys():
+      mat_vs_time = []
+      for timestepKey in power_dict.keys():
+        p = power_dict[timestepKey][materialKey]
+        mat_vs_time.append(p)
+      try:
+        parr = np.vstack((parr, mat_vs_time))
+      except:
+        parr = mat_vs_time
+
+    # normalize power if requested
+    if normalize:
+      # power is either normalied to 1.0 from this or the power fraction as returned by scale.
+      # power fraction not always 1.0 since gamma heating accounted for in nonfissile materials as well.
+      # see runCELI.py input option - include_non_fission_material_power
+      parr = parr / np.sum(parr, axis=0)
+
+    fig, ax2 = plt.subplots(figsize=figsize)
+    regions = np.size(parr[:,0])
+    for i in range(np.size(parr[0,:])):
+      ax2.plot(mats, parr[:,i])
+
+    # other
+    ax2.set_xlabel('Fission zone',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    ax2.set_ylabel('Power fraction',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+    return parr, BOS_time
+
+  def plot_all_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
+    """
+    Plots a 2d pcolormesh for the chosen isotope with substeps and all.
+
+    "power" in this context is essentially isotopes since this function is a nice copy and paste of
+    plot_all_power_map()
+    """
+
+    all_power_steps = {}
+    idx = 0
+    for bigStep in self.power_all.keys():
+      for substep in self.power_all[bigStep].keys():
+        all_power_steps[idx] = self.power_all[bigStep][substep]
+        idx += 1
+
+
+    # materials
+    mats = all_power_steps[0].keys()
+
+
+
+    # first make array for power:
+    parr = np.array([])
+    for materialKey in all_power_steps[0].keys():
+      mat_vs_time = []
+      for timestepKey in all_power_steps.keys():
+        p = all_power_steps[timestepKey][materialKey]
+        mat_vs_time.append(p)
+      try:
+        parr = np.vstack((parr, mat_vs_time))
+      except:
+        parr = mat_vs_time
+
+    # normalize power if requested
+    if normalize:
+      # power is either normalied to 1.0 from this or the power fraction as returned by scale.
+      # power fraction not always 1.0 since gamma heating accounted for in nonfissile materials as well.
+      # see runCELI.py input option - include_non_fission_material_power
+      parr = parr / np.sum(parr, axis=0)
+
+    # colors
+    cmap = plt.colormaps[cmap]
+    # now make pcolormesh
+    fig, ax = plt.subplots(figsize=figsize)
+    c = ax.pcolormesh(all_power_steps.keys(), mats, parr, cmap=cmap)
+
+    # colorbar
+    if normalize:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label('Power (normalized to unity)',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+    else:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label('Power fraction',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+
+    # other
+    ax.set_xlabel('Burnup step number',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    ax.set_ylabel('Material ID',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    # make black lines on x axis
+    time_widths = len(self.power_all[0])
+    ax.axvline(x=0.5, color='black', linestyle='-', alpha=0.3) # make line at x=1
+    for idx, x in enumerate(self.power_all.keys()):
+      ax.axvline(x=1+x*time_widths-0.5, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks separating burnup steps
+    return parr
 
 
 

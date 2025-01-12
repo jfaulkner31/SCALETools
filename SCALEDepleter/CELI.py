@@ -357,7 +357,9 @@ def CELI(fissionable_mats: list,
         mat_lib_this_step.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
 
         # add to mat lib if this is last iteration
-        if ci == corrector_iterations - 1:
+        # CHANGED HERE !!! Original -> ci == corrector_iterations - 1 --> if True
+        # changed so that this always runs and all substep isotopic libraries are always kept track of and updated.
+        if True:
           corrected_mat_lib.append_mat_to_lib(getComps.get_comps_from_std_mix_file(tmpdir+'/'+stdCmpFilename))
 
         # setup f71 to use as IC in BOS predictor calculation for next step since we are done iterating and supposedly converged
