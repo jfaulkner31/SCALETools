@@ -151,11 +151,14 @@ class ResultsCELI:
     print("out.plot_BOS_power_map")
     print("out.plot_BOS_power_2d")
     print("out.plot_all_power_map")
+    print("out.plot_BOS_isotopics_map")
     print("")
-    print("\n\nneed to make the following still")
+    print("\n\nNeed to make the following still")
     print("out.get_corrector_power()")
     print("out.get_corrector_isotope()")
     print("out.get_corrector_AO()")
+
+  # methods for postprocessing (getting values)
 
   def get_BU_vectors(self):
     """
@@ -291,6 +294,7 @@ class ResultsCELI:
 
     return keffs, sigmas
 
+  # methods for plotting
   def plot_BOS_power_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
     """
     Plots BOS power data as a mesh - this is the BOS value from the predictor MC calculation at T0 using
@@ -354,7 +358,6 @@ class ResultsCELI:
     for idx, x in enumerate(BOS_time[1:]):
       ax.axvline(x=x-time_widths[idx]/2, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks
     return parr, BOS_time
-
 
   def plot_all_power_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
     """
@@ -427,8 +430,6 @@ class ResultsCELI:
       ax.axvline(x=1+x*time_widths-0.5, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks separating burnup steps
     return parr
 
-
-
   def plot_BOS_power_2d(self, figsize: tuple, normalize: bool, fontsize=14, fontname='Cambria'):
     """
     Plots BOS power data as a xy plot - this is the BOS value from the predictor MC calculation at T0 using
@@ -461,7 +462,10 @@ class ResultsCELI:
     fig, ax2 = plt.subplots(figsize=figsize)
     regions = np.size(parr[:,0])
     for i in range(np.size(parr[0,:])):
-      ax2.plot(mats, parr[:,i])
+      if i == max(range(np.size(parr[0,:]))):
+        ax2.plot(mats,parr[:,i], 'k--')
+      else:
+        ax2.plot(mats, parr[:,i])
 
     # other
     ax2.set_xlabel('Fission zone',
@@ -547,6 +551,70 @@ class ResultsCELI:
       ax.axvline(x=1+x*time_widths-0.5, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks separating burnup steps
     return parr
 
+  def plot_BOS_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, isotope: str, fontsize=14, fontname='Cambria'):
+    """
+    Plots BOS power isotope as a mesh - this is the BOS value from the predictor MC calculation at T0 using
+    either IC's or nuclides that were converged by a series of corrector iterations.
+
+    Isotope and 'power/parr' are interchangable since this def was made as a copy and paste of plot_BOS_power_map
+    """
+
+    BOS_BU, BOS_time, power_dict = self.get_BOS_power()
+
+    # materials
+    mats = power_dict[0].keys()
+    parr = np.array([])
+    for bigStep in list(self.isotopics_all.keys())[0:-1]:
+      # since this is BOS only get the -1 values:
+      atom_dens_row = np.array([])
+      for mat in mats:
+        this_iso_val = float(self.isotopics_all[bigStep][-1].material_dict[mat].return_iso_atom_dens(isotope))
+        atom_dens_row = np.append(atom_dens_row, this_iso_val)
+      try:
+        parr = np.vstack((parr, atom_dens_row)) # stack row to the parr
+      except:
+        parr = atom_dens_row
+    parr = np.transpose(parr)
+
+    # normalize power if requested
+    if normalize:
+      # power is either normalied to 1.0 from this or the power fraction as returned by scale.
+      # power fraction not always 1.0 since gamma heating accounted for in nonfissile materials as well.
+      # see runCELI.py input option - include_non_fission_material_power
+      parr = parr / np.sum(parr, axis=0)
+
+    # colors
+    cmap = plt.colormaps[cmap]
 
 
+    # now make pcolormesh
+    fig, ax = plt.subplots(figsize=figsize)
+    c = ax.pcolormesh(BOS_time, mats, parr, cmap=cmap)
+
+    # colorbar
+    if normalize:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label(isotope+' (normalized to unity)',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+    else:
+      colorbar = plt.colorbar(c, ax=ax)
+      colorbar.set_label(isotope+' (at/bcm)',
+                    fontdict={'fontsize': fontsize,
+                              'fontname': fontname})
+
+    # other
+    ax.set_xlabel('Time (days)',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    ax.set_ylabel('Material ID',
+                  fontdict={'fontsize': fontsize,
+                            'fontname': fontname})
+
+    # make black lines on x axis
+    time_widths = BOS_time[1:] - BOS_time[0:-1]
+    for idx, x in enumerate(BOS_time[1:]):
+      ax.axvline(x=x-time_widths[idx]/2, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks
+    return parr
 

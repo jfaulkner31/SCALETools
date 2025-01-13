@@ -3,6 +3,7 @@
 # pulls latest version of SCALEDepleter as a folder in current repo.
 
 # copy this folder to one youd like to setup a calculation/case in.
+# the folder this file is ran in is the CALCULATION folder that holds all the data for that calculation as well.
 # then run this folder:
 # bash setupSCALEDepleter.sh
 

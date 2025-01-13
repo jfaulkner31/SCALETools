@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#PBS -l select=1:ncpus=48:mpiprocs=48
+#PBS -l walltime=00:30:00
+#PBS -N variableTemperature
+#PBS -P edu_res
+#PBS -o INL_OUTPUT.log
+#PBS -e INL_ERROR.log
+
+## some echo stuff
+NP=$(grep -c node ${PBS_NODEFILE})
+echo $PBS_NODEFILE > nodelist.txt
+echo omp_num_threads = $OMP_NUM_THREADS
+
+## loading scale and data for scale 6.3
+module load use.exp_ctl
+module load scale/6.3.2
+export DATA=/hpc-common/data/scale/6.3
+
+# assign tmpdir
+export TMPDIR=tmp
+echo $TMPDIR
+
+# cd into working dir
+cd $PBS_O_WORKDIR
+
+# use this for python -- python -u (unbuffered mode) inputfilename.py nodefile tmpdir numcores
+python -u _INPUT_FILE_.py ${PBS_NODEFILE} $TMPDIR 47
+
+# old run for scalerte on inl
+### scalerte -vvv -N 47 -M ${PBS_NODEFILE} homogenization.inp -m -T /tmp
