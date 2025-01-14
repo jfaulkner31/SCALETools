@@ -1,7 +1,8 @@
 def getPower(filename: str, include_non_fission_material_power: bool, fission_mat_ids, printP: bool, total_power_python: float):
   filename = filename.split('.')[0]+'.out'
 
-  target_string = "Number (MW/MTIHM)    (---)   (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)  n/(cm^2*sec)"
+  target_string_631 = "Number (MW/MTIHM)    (---)   (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)  n/(cm^2*sec)"
+  target_string_632 = "Number     (MW/MTIHM)    (---)       (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)     n/(cm^2*sec)"
   found_line = False
   power_dict = {}
   fissionable_mat_power = 0.0
@@ -9,7 +10,7 @@ def getPower(filename: str, include_non_fission_material_power: bool, fission_ma
   with open(filename, 'r') as file:
     lines = file.readlines()
   for line_number, line in enumerate(lines):  # Use enumerate for line numbers
-    if target_string in line:
+    if (target_string_631 in line) | (target_string_632 in line):
       found_line = True
     elif found_line:
       powerline = line.split()
