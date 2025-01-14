@@ -59,3 +59,39 @@ CEBM
 =====================
 CEPE - extremely unstable and still in the works of being developed/worked on
 =====================
+
+=====================
+Literature
+=====================
+A simple implicit coupling scheme for Monte Carlo neutronics and isotopic depletion
+
+Performance upgrades to the MCNP6 burnup capability for large scale
+depletion calculations
+
+Practical techniques for large-scale Monte Carlo reactor depletion calculatons
+
+Flux renormalization in constant power burnup calculations
+
+SCALE Manual - Triton
+
+Preventing xenon oscillations in Monte Carlo burnup calculations by forcing equilibrium (ppt)
+
+Comparison of Neutronics-Depletion Coupling
+Schemes for Burnup Calculations–Continued Study
+
+Numerical Stability of Existing Monte Carlo Burnup
+Codes in Cycle Calculations of Critical Reactors
+
+INLINE THERMAL AND XENON FEEDBACK ITERATIONS
+IN MONTE CARLO REACTOR CALCULATIONS
+
+Development and Analysis of High Order
+Neutron Transport–Depletion Coupling
+Algorithms
+
+Burnup calculation methodology in Serpent
+
+See Kotlyar et al. and anything with Kotlyar + Schwagerus, especially SIMP scheme and ppts on stochastic predictor+corrector
+
+A personal favorite for the ill informed artist:
+Why We Use Bad Color Maps and What You Can Do About It
