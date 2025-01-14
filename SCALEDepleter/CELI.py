@@ -294,6 +294,14 @@ def CELI(fissionable_mats: list,
       origen_file_list = []
       origen_tmpdirs = []
 
+      # interpolate power beteen T0 and T1 @ starts of substeps (LI_starts): interpd_power_dict[mat_id][idx of timestep]
+      power_t0 = power_by_step[step_num] # power at t0
+      power_t1 = power_by_step[step_num+1] # power at t1
+      interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0=power_t0, power_by_step_t1=power_t1,
+                                        times=LI_starts, start_time=0.0, end_time=steplength_days_this_step,
+                                        specific_power_this_step=specific_power_this_step)
+
+
       # now doing origen
       for idx, fiss_mat_id in enumerate(fissionable_mats):
         # first make interpolated f33 files.
@@ -314,12 +322,6 @@ def CELI(fissionable_mats: list,
         # TODO:: |V
         # my predictor corrector scheme is free to sya the power is anything - whether it is T0, T1, or T1/2 or interp(T) power or a weighted crank nicolson style power.
         # just note that the fundamental way origen does normalization during each origen substep is very unique and should be noted and considered in any paper.
-
-        # interpolate power beteen T0 and T1 @ starts of substeps (LI_starts): interpd_power_dict[mat_id][idx of timestep]
-        power_t0 = specific_power_this_step*power_by_step[step_num][fiss_mat_id] # power at t0
-        power_t1 = specific_power_this_step*power_by_step[step_num+1][fiss_mat_id] # power at t1
-        interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0=power_t0, power_by_step_t1=power_t1,
-                                         times=LI_starts, start_time=0.0, end_time=steplength_days_this_step)
 
         origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenCELIFile(fiss_mat_id=fiss_mat_id, step_num=step_num, predictor_corrector_string='CORRECTOR',
                                                                                 f33_substep_filepath_list=f33_substep_filepath_list, origenResults_F71dir=origenResults_F71dir,
