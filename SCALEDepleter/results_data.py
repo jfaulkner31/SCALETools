@@ -262,7 +262,7 @@ class ResultsCELI:
 
   def get_corrector_keffs(self, step_num):
     """
-    Returns the corrector-iterated keffs for the T0 value for this step.
+    Returns the corrector-iterated keffs for the T0 value for this step - aka the predictor value of keff at BOS/T0
     """
     final_keff = float
     final_sigma = float
@@ -271,6 +271,10 @@ class ResultsCELI:
     time = float
     bu = float
     self.keff_all
+
+    if step_num == 0:
+      print("No corrector iterated keffs for step 0 since we did not do correc to iterations to get to this result.")
+      return None, None
 
     step_num -= 1
     try:
@@ -477,7 +481,7 @@ class ResultsCELI:
                             'fontname': fontname})
     return parr, BOS_time
 
-  def plot_all_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, fontsize=14, fontname='Cambria'):
+  def plot_all_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, isotope: str, fontsize=14, fontname='Cambria'):
     """
     Plots a 2d pcolormesh for the chosen isotope with substeps and all.
 
@@ -485,30 +489,30 @@ class ResultsCELI:
     plot_all_power_map()
     """
 
-    all_power_steps = {}
-    idx = 0
-    for bigStep in self.power_all.keys():
-      for substep in self.power_all[bigStep].keys():
-        all_power_steps[idx] = self.power_all[bigStep][substep]
-        idx += 1
-
+    BOS_BU, BOS_time, power_dict = self.get_BOS_power()
 
     # materials
-    mats = all_power_steps[0].keys()
+    mats = power_dict[0].keys()
 
-
-
-    # first make array for power:
+    xLength = int(0)
     parr = np.array([])
-    for materialKey in all_power_steps[0].keys():
-      mat_vs_time = []
-      for timestepKey in all_power_steps.keys():
-        p = all_power_steps[timestepKey][materialKey]
-        mat_vs_time.append(p)
-      try:
-        parr = np.vstack((parr, mat_vs_time))
-      except:
-        parr = mat_vs_time
+    for bigStep in list(self.isotopics_all.keys())[0:-1]:
+      for substep in self.isotopics_all[bigStep].keys():
+        xLength += 1
+        atom_dens_row = np.array([])
+        for mat in mats:
+          this_iso_val = float(self.isotopics_all[bigStep][substep].material_dict[mat].return_iso_atom_dens(isotope))
+          atom_dens_row = np.append(atom_dens_row, this_iso_val)
+        try:
+          parr = np.vstack((parr, atom_dens_row)) # stack row to the parr
+        except:
+          parr = atom_dens_row
+
+    # transpose parr
+    parr = np.transpose(parr)
+
+    # make x axis:
+    x = np.linspace(1, xLength, xLength)
 
     # normalize power if requested
     if normalize:
@@ -521,7 +525,7 @@ class ResultsCELI:
     cmap = plt.colormaps[cmap]
     # now make pcolormesh
     fig, ax = plt.subplots(figsize=figsize)
-    c = ax.pcolormesh(all_power_steps.keys(), mats, parr, cmap=cmap)
+    c = ax.pcolormesh(x, mats, parr, cmap=cmap)
 
     # colorbar
     if normalize:
@@ -536,7 +540,7 @@ class ResultsCELI:
                               'fontname': fontname})
 
     # other
-    ax.set_xlabel('Burnup step number',
+    ax.set_xlabel('Step/substep number',
                   fontdict={'fontsize': fontsize,
                             'fontname': fontname})
 

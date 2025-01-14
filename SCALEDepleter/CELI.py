@@ -17,7 +17,7 @@ import shutil
 import results_data
 
 """
-Runs a CEBM predictor/corrector scheme.
+Runs a CELI predictor/corrector scheme.
 Step 0 - Run Transport at T0.
 Step 1 - Deplete with T0 f33 file until T1 - get T1_predictor.f71.
 Step 2 - Run Transport with T1.f71 nuclide composition - get T1.f33
@@ -307,6 +307,14 @@ def CELI(fissionable_mats: list,
 
         # now make origen files that we are going to run
         # todo - power_by_step[step_num] or step_num+1 for use in makeOrigenFile for the corrector? it was originalkly step_num+1 but i think i fixed it?
+        # todo --- resolved ---> what i need to do is interpolate the power using the CELI scheme.
+        # todo ---- see Flux renormalization in constant power burnup calculations by Isotalo for more information on the above.
+        # todo ---- what we want to basically do is add power interpolation between T0 and T1,
+        # todo ---- good sens. analysis can also be to test if using all T0, all T1, or a 0.7T0 + 0.3T1 might be better? reasonable question to ask what power to use when depleting.
+        # TODO:: |V
+        # my predictor corrector scheme is free to sya the power is anything - whether it is T0, T1, or T1/2 or interp(T) power or a weighted crank nicolson style power.
+        # just note that the fundamental way origen does normalization during each origen substep is very unique and should be noted and considered in any paper.
+
         origen_file_handle, origen_tmpdir = makeAndRunOrigen.makeOrigenCELIFile(fiss_mat_id=fiss_mat_id, step_num=step_num, predictor_corrector_string='CORRECTOR',
                                                                                 f33_substep_filepath_list=f33_substep_filepath_list, origenResults_F71dir=origenResults_F71dir,
                                                                                 LI_starts=LI_starts, LI_ends=LI_ends, dt=dt, del_t=del_t, origen_steps_per_div=origen_steps_per_div,
