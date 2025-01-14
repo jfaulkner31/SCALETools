@@ -187,7 +187,8 @@ def makeOrigenCELIFile(fiss_mat_id: int,
                        specific_power: float,
                        volume: float,
                        appendThis: str,
-                       bos_cmp: material_normal):
+                       bos_cmp: material_normal,
+                       interpd_power_dict: dict):
   """
   Makes origen files for CE/LI scheme corrector step.
   For the corrector step, we use linear interpolated f33 files for a set number of steps (dt long)
@@ -229,7 +230,8 @@ def makeOrigenCELIFile(fiss_mat_id: int,
       TIME_VECTOR.append(TIME_VECTOR[-1]+this)
     TIME_VECTOR = TIME_VECTOR[1:] #  delete the leading zero
 
-    POWER_VECTOR = [specific_power]*origen_steps_per_div
+    # POWER_VECTOR = [specific_power]*origen_steps_per_div # old power vector
+    POWER_VECTOR = interpd_power_dict[fiss_mat_id][idx] # new power value from interpolated library with time
     VOLUME = volume
 
     this_file.write("case{\n")
@@ -333,8 +335,6 @@ def blendCELIOrigenFiles(origen_f71_locs_all: dict,
     BLENDED_F71_LOC = SAVE_F71_LOC[3:]
 
   return BLENDED_F71_LOC
-
-
 
 
 def makeOrigenCEPEFile(fission_mat_ids: list,
