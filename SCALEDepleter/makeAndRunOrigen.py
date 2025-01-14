@@ -231,7 +231,7 @@ def makeOrigenCELIFile(fiss_mat_id: int,
     TIME_VECTOR = TIME_VECTOR[1:] #  delete the leading zero
 
     # POWER_VECTOR = [specific_power]*origen_steps_per_div # old power vector
-    POWER_VECTOR = interpd_power_dict[fiss_mat_id][idx] # new power value from interpolated library with time
+    POWER_VECTOR = [interpd_power_dict[fiss_mat_id][idx]]*origen_steps_per_div # new power value from interpolated library with time
     VOLUME = volume
 
     this_file.write("case{\n")
