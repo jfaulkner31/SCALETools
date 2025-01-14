@@ -316,8 +316,8 @@ def CELI(fissionable_mats: list,
         # just note that the fundamental way origen does normalization during each origen substep is very unique and should be noted and considered in any paper.
 
         # interpolate power beteen T0 and T1 @ starts of substeps (LI_starts): interpd_power_dict[mat_id][idx of timestep]
-        power_t0 = specific_power_this_step*power_by_step[step_num] # power at t0
-        power_t1 = specific_power_this_step*power_by_step[step_num+1] # power at t1
+        power_t0 = specific_power_this_step*power_by_step[step_num][fiss_mat_id] # power at t0
+        power_t1 = specific_power_this_step*power_by_step[step_num+1][fiss_mat_id] # power at t1
         interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0=power_t0, power_by_step_t1=power_t1,
                                          times=LI_starts, start_time=0.0, end_time=steplength_days_this_step)
 
