@@ -326,7 +326,8 @@ def CELI(fissionable_mats: list,
                                                                                 LI_starts=LI_starts, LI_ends=LI_ends, dt=dt, del_t=del_t, origen_steps_per_div=origen_steps_per_div,
                                                                                 specific_power=specific_power_this_step*power_by_step[step_num][fiss_mat_id],
                                                                                 volume=fissionable_mats_vols[idx], bos_cmp=bos_mat_lib_this_mat,
-                                                                                appendThis='_corrIter'+str(ci))
+                                                                                appendThis='_corrIter'+str(ci),
+                                                                                interpd_power_dict=interpd_power_dict)
         origen_file_list.append(origen_file_handle)
         origen_tmpdirs.append(origen_tmpdir)
 
