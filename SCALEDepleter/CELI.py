@@ -51,7 +51,8 @@ def CELI(fissionable_mats: list,
           origen_steps_per_div: int,
           corrector_iterations: int,
           relaxation_factor: float,
-          case_name: str):
+          case_name: str,
+          include_predictor_in_blender: bool):
 
   ##################################################################
   ####################### SANITY CHECKS ############################
@@ -357,7 +358,8 @@ def CELI(fissionable_mats: list,
                                                                      origenResults_F71dir=origenResults_F71dir, predictor_corrector_string='CORRECTOR',
                                                                      appendThis='_corrIter'+str(ci),
                                                                      relaxation_factor=relaxation_factor,
-                                                                     origen_f71_locs_all=origen_f71_locs_all)
+                                                                     origen_f71_locs_all=origen_f71_locs_all,
+                                                                     include_predictor_in_blender=include_predictor_in_blender)
 
         # get std cmp filename for next MC run
         if ci == corrector_iterations - 1: # (last iteration no we have need to setup next corrector iteration)

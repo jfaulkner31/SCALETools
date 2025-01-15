@@ -39,6 +39,7 @@ origen_steps_per_div = 1 # how many origen substeps are used for each division o
 # Stochastic CELI methods
 corrector_iterations = 3 # for advanced stochastic CELI - how many corrector iterations are done. 1 for basic CELI without any iterations
 relaxation_factor = 0.3 # relaxation factor for stochastic CELI
+include_predictor_in_blender = True
 
 # File Handles - keep as is - only consider changing the addnux dictionary
 addnuxdictbase = 'addnuxDicts/addnux1Dict.dict'

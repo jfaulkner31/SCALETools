@@ -274,7 +274,8 @@ def makeOrigenCELIFile(fiss_mat_id: int,
 def blendCELIOrigenFiles(origen_f71_locs_all: dict,
                          corrector_iteration: int, step_num: int, fiss_mat_id: int,
                          origenResults_F71dir: str, predictor_corrector_string: str, appendThis: str,
-                         relaxation_factor: float):
+                         relaxation_factor: float,
+                         include_predictor_in_blender: bool):
   """
   Blends and runs CELI Origen files based on current iteration and previous iteration with relaxation.
   Used to calculatee average of all previous iterations for next MC step.
@@ -299,8 +300,12 @@ def blendCELIOrigenFiles(origen_f71_locs_all: dict,
     f71_name_in_this_file = 'blended_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(idx)+'.f71'
     if idx >= 0:
       COPY_LINE = '\tcp ../'+ origen_f71_locs_all[idx][fiss_mat_id] + ' ' + f71_name_in_this_file
-    else:
-      COPY_LINE = 'NEGATIVE_IDX_NO_COPY'
+    else: # runs when idx == -1
+      if (include_predictor_in_blender == False):
+        COPY_LINE = 'NEGATIVE_IDX_NO_COPY___DO_NOT_INCLUDE_PREDICTOR_ITERATION_IN_BLENDER_AND_INSTEAD_DO_NOT_BLEND_FOR_ITERATION_0' # dont include
+      else:
+        # if we choose to include the predictor guess for the nuclide density in our iterations
+        COPY_LINE = '\tcp ../'+origenResults_F71dir+'/PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
     this_file.write(COPY_LINE+'\n')
   this_file.write('end\n')
 
@@ -326,8 +331,8 @@ def blendCELIOrigenFiles(origen_f71_locs_all: dict,
 
   this_file.close()
 
-  # if corrector iteration is 0 then we dont run blended since theres only a single f71
-  if corrector_iteration == 0:
+  # if corrector iteration is 0 then we dont run blended since theres only a single f71 using corrector data so far.
+  if (corrector_iteration == 0) & (include_predictor_in_blender == False):
     BLENDED_F71_LOC = origen_f71_locs_all[idx][fiss_mat_id]
     shutil.copyfile(BLENDED_F71_LOC, SAVE_F71_LOC[3:]) # copies file to
   else:
