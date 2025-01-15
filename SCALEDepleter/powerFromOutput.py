@@ -50,7 +50,7 @@ def getPower(filename: str, include_non_fission_material_power: bool, fission_ma
 
   return power_dict
 
-def interpolatePower(power_by_step_t0: dict, power_by_step_t1: dict , times, start_time, end_time,
+def interpolatePower(power_by_step_t0_pre: dict, power_by_step_t1_pre: dict , times, start_time, end_time,
                      specific_power_this_step: float, printP: bool):
   """
   Takes in power_by_step for t0 and t1 and interpolates based on time value
@@ -65,10 +65,12 @@ def interpolatePower(power_by_step_t0: dict, power_by_step_t1: dict , times, sta
   norm_t0 = 0.0
   norm_t1 = 0.0
 
-  # first multiply each element by specific power to get true power
+  # first multiply each element by specific power to get true power that we want to work with
+  power_by_step_t0 = {}
+  power_by_step_t1 = {}
   for mat_id in mat_ids:
-    power_by_step_t0[mat_id] *= specific_power_this_step
-    power_by_step_t1[mat_id] *= specific_power_this_step
+    power_by_step_t0[mat_id] = power_by_step_t0_pre[mat_id] * specific_power_this_step
+    power_by_step_t1[mat_id] = power_by_step_t1_pre[mat_id] * specific_power_this_step
 
   # get norms (aka total power) at t0 and t1
   for mat_id in mat_ids:

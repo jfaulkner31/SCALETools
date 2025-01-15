@@ -297,7 +297,7 @@ def CELI(fissionable_mats: list,
       # interpolate power beteen T0 and T1 @ starts of substeps (LI_starts): interpd_power_dict[mat_id][idx of timestep]
       power_t0 = power_by_step[step_num] # power at t0
       power_t1 = power_by_step[step_num+1] # power at t1
-      interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0=power_t0, power_by_step_t1=power_t1,
+      interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0_pre=power_t0, power_by_step_t1_pre=power_t1,
                                         times=LI_starts, start_time=0.0, end_time=steplength_days_this_step,
                                         specific_power_this_step=specific_power_this_step)
 
