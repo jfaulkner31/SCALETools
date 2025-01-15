@@ -95,3 +95,28 @@ See Kotlyar et al. and anything with Kotlyar + Schwagerus, especially SIMP schem
 
 A personal favorite for the ill informed artist:
 Why We Use Bad Color Maps and What You Can Do About It
+
+
+TODO:
+review following for iteration 0:
+need to trace back and make sure soln. is relaxing everything / advancing properly.just test xe135 or u235 and make sure soln is advancing as we expect it to.
+=shell
+NEGATIVE_IDX_NO_COPY
+	cp ../OrigenResults_F71dir/CORRECTOR_EOS_step4_mat116_corrIter0.f71 blended_step4_mat116_corrIter0.f71
+end
+=origen
+case(b0) {
+	lib{file="end7dec" pos=1}
+	time{ units=SECONDS t=[1e-20] }
+	mat{ load{ file="blended_step4_mat116_corrIter-1.f71" pos=1 } }
+}
+case(b1) {
+	time{ units=SECONDS t=[1e-20] }
+	mat{ load{ file="blended_step4_mat116_corrIter0.f71" pos=1 } }
+}
+case(blend){
+	time{ units=SECONDS t=[1e-20] }
+	mat{ blend=[ b0=0.7 b1=0.3 ] }
+	save{file="../OrigenResults_F71dir/BLENDED_EOS_step4_mat116_corrIter0.f71" steps=[LAST]}
+}
+end

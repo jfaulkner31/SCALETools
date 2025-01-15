@@ -61,7 +61,7 @@ def interpolatePower(power_by_step_t0_pre: dict, power_by_step_t1_pre: dict , ti
 
   End time - t1 (End of big step - when MC is ran second)
   """
-  mat_ids = power_by_step_t0.keys()
+  mat_ids = power_by_step_t0_pre.keys()
   norm_t0 = 0.0
   norm_t1 = 0.0
 

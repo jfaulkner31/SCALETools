@@ -299,7 +299,8 @@ def CELI(fissionable_mats: list,
       power_t1 = power_by_step[step_num+1] # power at t1
       interpd_power_dict = powerFromOutput.interpolatePower(power_by_step_t0_pre=power_t0, power_by_step_t1_pre=power_t1,
                                         times=LI_starts, start_time=0.0, end_time=steplength_days_this_step,
-                                        specific_power_this_step=specific_power_this_step)
+                                        specific_power_this_step=specific_power_this_step,
+                                        printP=False)
 
 
       # now doing origen
