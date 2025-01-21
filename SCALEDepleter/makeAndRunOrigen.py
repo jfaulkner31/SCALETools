@@ -305,14 +305,16 @@ def blendCELIOrigenFiles(origen_f71_locs_all: dict,
         COPY_LINE = 'NEGATIVE_IDX_NO_COPY___DO_NOT_INCLUDE_PREDICTOR_ITERATION_IN_BLENDER_AND_INSTEAD_DO_NOT_BLEND_FOR_ITERATION_0' # dont include
       else:
         # if we choose to include the predictor guess for the nuclide density in our iterations
-        COPY_LINE = '\tcp ../'+origenResults_F71dir+'/PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+        COPY_LINE = '\tcp ../'+origenResults_F71dir+'/PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71' + ' PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
     this_file.write(COPY_LINE+'\n')
   this_file.write('end\n')
 
   this_file.write('=origen\n')
   for pos, idx in enumerate([corrector_iteration-1, corrector_iteration]):
-
-    f71_name_in_this_file = 'blended_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(idx)+'.f71'
+    if (idx == -1) & (include_predictor_in_blender):
+      f71_name_in_this_file = 'PREDICTOR_EOS_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'.f71'
+    else:
+      f71_name_in_this_file = 'blended_step'+str(step_num)+'_mat'+str(fiss_mat_id)+'_corrIter'+str(idx)+'.f71'
 
     this_file.write('case(b'+str(pos)+') { '+'\n')
     if pos == 0:

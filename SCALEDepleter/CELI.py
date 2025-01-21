@@ -119,7 +119,8 @@ def CELI(fissionable_mats: list,
               origen_steps_per_div=origen_steps_per_div,
               corrector_iterations=corrector_iterations,
               relaxation_factor=relaxation_factor,
-              case_name=case_name)
+              case_name=case_name,
+              include_predictor_in_blender=include_predictor_in_blender)
 
 
   # completely remove and remake some directories - since we are makign a new case

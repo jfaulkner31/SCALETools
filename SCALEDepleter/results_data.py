@@ -37,7 +37,8 @@ class ResultsCELI:
               origen_steps_per_div=int,
               corrector_iterations=int,
               relaxation_factor=float,
-              case_name=str):
+              case_name=str,
+              include_predictor_in_blender=bool):
 
     # if we are making the class for the first time then we must make a variable case settings and attach everything
     self.case_settings = {}
@@ -64,7 +65,7 @@ class ResultsCELI:
     self.case_settings['corrector_iterations'] = corrector_iterations
     self.case_settings['relaxation_factor'] = relaxation_factor
     self.case_settings['case_name'] = case_name
-
+    self.case_settings['include_predictor_in_blender'] = include_predictor_in_blender
     # now dealing with the actual data and results
     self.keff_all = {} # keff by steps and then by another internal dict by predictor iterations : keff_all[step][iteration]
     self.BOS_keff_lines = {} # correct keff at BOS for each real step
@@ -152,6 +153,7 @@ class ResultsCELI:
     print("out.plot_BOS_power_2d")
     print("out.plot_all_power_map")
     print("out.plot_BOS_isotopics_map")
+    print("out.plot_BOS_ao")
     print("")
     print("\n\nNeed to make the following still")
     print("out.get_corrector_power()")
@@ -259,6 +261,34 @@ class ResultsCELI:
 
     x=np.linspace(1,np.size(ao), np.size(ao))
     return x, ao
+
+  def plot_all_ao(self, figsize, fontsize, fontname, mod, extraLines):
+    x, ao = self.get_all_AO()
+    lng = len(ao)
+
+    inter = int(1)
+    BOS_ao = []
+    BOS_idx = []
+    for idx in range(lng):
+      if (inter % mod) == 1:
+        # this is a BOS value:
+        BOS_idx += [idx+1]
+        BOS_ao += [ao[idx]]
+      inter += 1
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(x, ao, 'ko--', linewidth=1, markerfacecolor='k', markersize=3, label='All values')
+    ax.plot(BOS_idx, BOS_ao, 'ro', label='Final value')
+
+    ax.set_xlabel('Step number', fontname=fontname, fontsize=fontsize)
+    ax.set_ylabel('Axial offset', fontname=fontname, fontsize=fontsize)
+
+
+    if len(extraLines) > 0:
+      for thisy in extraLines:
+        ax.axhline(y = thisy, color = 'k', linestyle = '--', alpha=0.3, linewidth=1)
+
+
 
   def get_corrector_keffs(self, step_num):
     """
@@ -481,7 +511,7 @@ class ResultsCELI:
                             'fontname': fontname})
     return parr, BOS_time
 
-  def plot_all_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, isotope: str, fontsize=14, fontname='Cambria'):
+  def plot_all_isotopics_map(self, figsize: tuple, normalize: bool, cmap: str, isotope: str, fontsize=14, fontname='Cambria', only_do_parr=False):
     """
     Plots a 2d pcolormesh for the chosen isotope with substeps and all.
 
@@ -521,6 +551,9 @@ class ResultsCELI:
       # see runCELI.py input option - include_non_fission_material_power
       parr = parr / np.sum(parr, axis=0)
 
+    if only_do_parr:
+      return parr
+
     # colors
     cmap = plt.colormaps[cmap]
     # now make pcolormesh
@@ -530,12 +563,12 @@ class ResultsCELI:
     # colorbar
     if normalize:
       colorbar = plt.colorbar(c, ax=ax)
-      colorbar.set_label('Power (normalized to unity)',
+      colorbar.set_label(isotope+' conc. (normalized to unity)',
                     fontdict={'fontsize': fontsize,
                               'fontname': fontname})
     else:
       colorbar = plt.colorbar(c, ax=ax)
-      colorbar.set_label('Power fraction',
+      colorbar.set_label(isotope+' (at|b-cm)',
                     fontdict={'fontsize': fontsize,
                               'fontname': fontname})
 
@@ -622,3 +655,49 @@ class ResultsCELI:
       ax.axvline(x=x-time_widths[idx]/2, color='black', linestyle='-', alpha=0.3) # make a black mesh at xticks
     return parr
 
+  def plot_BOS_ao(self, timeOnX: bool, figsize, fontsize=14, fontname='Cambria'):
+    b, t, ao = self.get_BOS_AO()
+    fig, ax = plt.subplots(figsize=figsize)
+    if timeOnX:
+      ax.plot(t,ao,'kx--', linewidth=1)
+      ax.set_xlabel('Time (d)', fontname=fontname, fontsize=fontsize)
+    else:
+      ax.plot(b,ao,'kx--', linewidth=1)
+      ax.set_xlabel('Burnup (GWd|tIHM)', fontname=fontname, fontsize=fontsize)
+    ax.set_ylabel('BOS axial offset', fontname=fontname, fontsize=fontsize)
+
+  def plot_all_isotopics_ao(self, figsize, isotope, fontsize=14, fontname='Cambria', extraLines=[]):
+    parr = self.plot_all_isotopics_map(self, normalize=False, cmap='turbo', isotope=isotope, only_do_parr=True)
+    offset = []
+    for step in range(np.shape(parr)[1]):
+      top = 0.0
+      bottom = 0.0
+      for mat in range(np.shape(parr)[0]):
+        if mat <= 7:
+          top += parr[mat,step]
+        else:
+          bottom += parr[mat,step]
+      offset += [(top-bottom)/(top+bottom)]
+
+    x = np.linspace(0,len(offset)-1, len(offset))
+
+    previous = -1.0
+    final_idx = []
+    final_values = []
+    for idx, this in enumerate(offset):
+      if this == previous:
+        final_idx += [idx]
+        final_values += [this]
+
+      previous = this
+
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(x, offset, 'ko--', linewidth=1, markerfacecolor='k', markersize=3, label='All values')
+    ax.plot(final_idx, final_values, 'ro', label='Final value')
+
+    ax.set_xlabel('Step number', fontname=fontname, fontsize=fontsize)
+    ax.set_ylabel('Axial offset '+isotope, fontname=fontname, fontsize=fontsize)
+    if len(extraLines) > 0:
+      for thisy in extraLines:
+        ax.axhline(y = thisy, color = 'k', linestyle = '--', alpha=0.3, linewidth=1)
