@@ -715,7 +715,7 @@ if splittype == 'CartesianGridSplit':
   surface_input, media_input, media_id_list = CartesianGridSplit(surface_object_collection,
                                                                   medialine, nx, ny, nz, surfaces_offset, media_offset)
 
-elif splittype = 'CylinderRZSplit':
+elif splittype == 'CylinderRZSplit':
   surface_input, media_inpt, media_id_list = CylinderRZSplit(surface_object_collection,
                                                                   medialine, nx, ny, nz, surfaces_offset, media_offset)
 else:
