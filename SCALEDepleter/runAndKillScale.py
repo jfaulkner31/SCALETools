@@ -16,9 +16,9 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
 
   print(f"Started process with PID: {process.pid}", flush=True)
 
-  print("Now sleeping python for 5 seconds", flush=True)
+  print("Now sleeping python for 10 seconds", flush=True)
 
-  time.sleep(5)
+  time.sleep(10)
 
   try:
     # Step 2: Monitor the criteria
@@ -46,6 +46,10 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
             terminate_process = True
             raise_exception = True
             print("Termination of process detected", flush=True)
+          if "best estimate system k-eff" in line:
+            terminate_process = True
+            raise_exception = False
+            print("Termination of process detected", flush=True)
 
       except KeyboardInterrupt:
         print("Manual interruption received.")
@@ -59,7 +63,7 @@ def runAndKillScale(scale_input_line, scale_input_file_name):
     process.wait() # garbage collection for subprocess to finish killing
 
   # Step 3: Kill the process
-  time.sleep(6) # sleep for 20 seconds to let things finish writing/copying
+  time.sleep(15) # sleep for 20 seconds to let things finish writing/copying
   os.killpg(os.getpgid(process.pid), signal.SIGTERM)
   process.wait() # garbage collection for subprocess to finish killing
   print("Process terminated after", time.time()-start_time, "seconds.", flush=True)

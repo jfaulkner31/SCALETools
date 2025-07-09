@@ -417,8 +417,8 @@ read parameters
 'nsk=275
 'npg=75000
 gen=20
-nsk=10
-npg=5000
+nsk=100
+npg=250000
 dbx=2
 flx=yes
 fdn=yes

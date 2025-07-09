@@ -1,10 +1,117 @@
 import numpy as np
 
+def get_triton_depletion_table(filename: str):
+  """
+  Gets power for each material from scale output and
+  also gets normalization factors for HM mass
+
+  Parameters
+  ----------
+  filename : str
+    name of scale output file from TRITON
+
+  Returns
+  -------
+  table : dict
+    table of power and flux information from TRITON
+  normalization_factor : float
+    total mass of HM
+
+  """
+  table = {}
+
+  found_line_631_632 = False
+  found_line_624 = False
+
+  target_string_631 = "Number (MW/MTIHM)    (---)   (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)  n/(cm^2*sec)"
+  target_string_632 = "Number     (MW/MTIHM)    (---)       (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)     n/(cm^2*sec)"
+  target_string_624 = "Number (MW/MTIHM)    (---)   (MW/MTIHM)  n/(cm^2*sec)  n/(cm^2*sec)"
+
+
+  filename = filename.split('.')[0]+'.out'
+  with open(filename, 'r') as file:
+    lines = file.readlines()
+
+  for idx , line in enumerate(lines):
+    if "Masses will be normalized by a factor of" in line:
+      # this is the normalization line
+      normline = line.split()
+      for this_idx, word in enumerate(normline):
+        if word == "of":
+          idx_of_factor = this_idx + 1
+          break
+      # the normalization factor
+      norm_factor = float(normline[idx_of_factor])
+    if (target_string_631 in line) | (target_string_632 in line):
+      found_line_631_632 = True
+    if (target_string_624 in line):
+      found_line_624 = True
+    ### FOUND LINE 6.3.1 or 6.3.2 ###
+    elif found_line_631_632:
+      powerline = line.split()
+      # print(powerline)
+      if 'Total' in powerline:
+        break
+      else:
+        mixture_number = int(powerline[0])
+        total_power = float(powerline[1])
+        frac_power = float(powerline[2])
+        if "N/A" in powerline[3]:
+          mixture_power = 0.0
+        else:
+          mixture_power = float(powerline[3])
+        if "N/A" in powerline[4]:
+          mixture_burnup = 0.0
+        else:
+          mixture_burnup = float(powerline[4])
+        thermal_flux = float(powerline[5])
+        total_flux = float(powerline[6])
+        item = {"total_power": total_power,
+                "frac_power": frac_power,
+                "mixture_power": mixture_power,
+                "mixture_burnup": mixture_burnup,
+                "thermal_flux": thermal_flux,
+                "total_flux": total_flux}
+        table[mixture_number] = item
+    ### FOUND LINE 6.2.4 ###
+    elif found_line_624:
+      powerline = line.split()
+      # print(powerline)
+      if 'Total' in powerline:
+        break
+      else:
+        mixture_number = int(powerline[0])
+        total_power = float(powerline[1])
+        frac_power = float(powerline[2])
+        if "N/A" in powerline[3]:
+          mixture_power = 0.0
+        else:
+          mixture_power = float(powerline[3])
+        mixture_burnup = 0.0 # in 6.2.4 always just set bu to 0.0 since it doesnt return this info
+        thermal_flux = float(powerline[4])
+        total_flux = float(powerline[5])
+        item = {"total_power": total_power,
+                "frac_power": frac_power,
+                "mixture_power": mixture_power,
+                "mixture_burnup": mixture_burnup,
+                "thermal_flux": thermal_flux,
+                "total_flux": total_flux}
+        table[mixture_number] = item
+
+
+  # total system mass will then be = 1e6 / norm_factor
+  # since norm_factor = 1e6 / TOTAL_MASS
+
+  #      table  norm_factor   total_mass ()
+  return table, norm_factor, 1e6/norm_factor
+
+
 def getPower(filename: str, include_non_fission_material_power: bool, fission_mat_ids, printP: bool, total_power_python: float):
   filename = filename.split('.')[0]+'.out'
 
   target_string_631 = "Number (MW/MTIHM)    (---)   (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)  n/(cm^2*sec)"
   target_string_632 = "Number     (MW/MTIHM)    (---)       (MW/MTIHM)   (GWd/MTIHM)   n/(cm^2*sec)     n/(cm^2*sec)"
+  target_string_624 = "Number (MW/MTIHM)    (---)   (MW/MTIHM)  n/(cm^2*sec)  n/(cm^2*sec)"
   found_line = False
   power_dict = {}
   fissionable_mat_power = 0.0
@@ -12,7 +119,7 @@ def getPower(filename: str, include_non_fission_material_power: bool, fission_ma
   with open(filename, 'r') as file:
     lines = file.readlines()
   for line_number, line in enumerate(lines):  # Use enumerate for line numbers
-    if (target_string_631 in line) | (target_string_632 in line):
+    if (target_string_631 in line) | (target_string_632 in line) | (target_string_624 in line):
       found_line = True
     elif found_line:
       powerline = line.split()
@@ -44,7 +151,7 @@ def getPower(filename: str, include_non_fission_material_power: bool, fission_ma
       power_dict[key] = power_dict[key]/fissionable_mat_power
 
   if printP:
-    print("NOW PRINTING POWERS")
+    print("NOW PRINTING POWERS", "")
     for key in power_dict.keys():
       print("\t",key,"|",power_dict[key],"|",power_dict[key]*total_power_python)
 

@@ -199,6 +199,11 @@ def CELI(fissionable_mats: list,
     f33_files_bos = f33_files # set bos f33 files
 
     # get and append power - this overwrites values from the corrector iteration steps - correct power at T0 for this step
+    # power_by_step has fractional powers. (all powers in all materials will sum to 1.0,
+    # if not including nonfissionable materials, they will sum to slightly less than 1.0)
+
+    _, _, mass_HM_this_step = powerFromOutput.get_triton_depletion_table(filename=corrected_triton_input)
+
     power_by_step[step_num] = powerFromOutput.getPower(printP=print_transport_powers, fission_mat_ids=fissionable_mats,
                                                       include_non_fission_material_power=include_non_fission_material_power,
                                                       filename=corrected_triton_input, total_power_python=specific_power_this_step)

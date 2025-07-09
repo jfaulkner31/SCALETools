@@ -20,6 +20,10 @@ SCALEDepleter/tmp_origen_*/
 SCALEDepleter/*.tempdir.path
 SCALEDepleter/blended_CELI_tmp/
 SCALEDepleter/testing/
+SCALEDepleter/jonathons_pc_machine_file
+SCALEDepleter/tmpdir
+SCALEDepleter/*.htmd
+SCALEDepleter/*.vscode
 SCALEParser/*/
 SCALEParser/__pycache__/
 .gitkey
