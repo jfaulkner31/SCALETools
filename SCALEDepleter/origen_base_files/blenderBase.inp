@@ -1,0 +1,29 @@
+=shell
+  cp CORRECTOR_STRING_HERE c.f71
+  cp PREDICTOR_STRING_HERE p.f71
+end
+
+
+
+=origen
+case(p){
+  lib{file="end7dec" pos=1}
+  time{ units=SECONDS t=[1e-20] }
+  mat{ load{ file="p.f71" pos=1 } }
+}
+
+case(c){
+  time{ units=SECONDS t=[1e-20] }
+  mat{ load{ file="c.f71" pos=1 } }
+}
+
+case(blend){
+  time{ units=SECONDS t=[1e-20] }
+  mat{ blend=[ p=0.5 c=0.5 ] }
+  save{ file="BLENDER_SAVE"    steps=[LAST] }
+}
+end
+
+=shell
+  BLENDED_STRING_HERE
+end
