@@ -74,7 +74,7 @@ def CELI(fissionable_mats: list,
     raise Exception("Relaxation factor is bounded (0,1]")
   if (origen_predictor_divs < 2):
     raise Exception("Origen predictor divs must be 2 or more - 2 reccomended since CRAM methodology is being used and CRAM accuracy is not strongly related to timestep size.")
-  if (scale_version) not in [631, 632, 631]:
+  if (scale_version) not in [631, 632, 624]:
     raise Exception("Scale version number must be and integer: 624, 631, or 632")
 
 

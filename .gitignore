@@ -41,7 +41,7 @@ SCALEDepleter/*/*.volumes
 SCALEDepleter/*/*.inp
 
 SCALEDepleter/f33_interp.log
-SCALEDepleter/depletion_python_scripts/__pycache__
+SCALEDepleter/depletion_python_scripts/__pycache__/
 
 !SCALEDepleter/*/triton_base.inp
 !SCALEDepleter/triton_base.inp
