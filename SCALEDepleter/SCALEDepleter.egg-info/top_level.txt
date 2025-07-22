@@ -1,0 +1,2 @@
+depletion_bash_scripts
+depletion_python_scripts
