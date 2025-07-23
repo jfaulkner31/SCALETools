@@ -37,15 +37,23 @@ conda install pip
 ### Install SCALEDepleter
 cd SCALETools
 
-pip install .
+pip install -e .
 
 ### If you want a modifiable version of SCALEDepleter such that changes reflect at runtime:
 pip install -e .
 
+### ... and if you want to not modify changes to the module:
+pip install .
+
 ### Test that it works:
+cd ../
+
 python
 
 import SCALEDepleter
+
+### Exit python with ctrl+D
+ctrl+D
 
 ### To copy the input file for CELI into a base directory:
 cd "yourWorkingProjectFolder"
