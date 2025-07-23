@@ -44,6 +44,8 @@ SCALEDepleter/f33_interp.log
 SCALEDepleter/depletion_python_scripts/__pycache__/
 
 SCALEDepleter.egg*
+build/
+
 
 !SCALEDepleter/*/triton_base.inp
 !SCALEDepleter/triton_base.inp
