@@ -453,3 +453,26 @@ def CELI(fissionable_mats: list,
   pickledData.makeOutput(keff_lines=keff_lines, power_by_step=power_by_step,
                          specific_power=specific_power, steplength_days=steplength_days,
                          time_lib=time_lib, pkl_filename='output.pkl')
+
+
+def makeInput():
+  """
+  Copies CELI input to current working directory.
+  """
+  import os
+  import shutil
+
+  print("Now copy a CELI template file to the current working directory.")
+
+  wr_dir = os.getcwd()
+  print("Working directory is:", wr_dir)
+  depletion_install_dir = os.path.dirname(__file__)
+  print("Depletion directory is:", depletion_install_dir)
+  script_to_copy = depletion_install_dir+"/runCELI.py"
+  new_name = wr_dir + "/celi_template.py"
+
+  print("Script to copy is:", script_to_copy)
+
+  print("Script that is copied over is:", new_name)
+
+  shutil.copy(script_to_copy, new_name)

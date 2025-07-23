@@ -10,9 +10,15 @@
   Is addnux set to 0 in the triton base file?
 
   To run via python command line: python <thisFileName>.py machinefile tmpdir numProcsTransport
+
+  1. Set addnux0 in the base triton input file to addnux=0
+  2. Input your fissionable material volumes
+  3. Input the id's to be depleted (must match that in triton input so that all meaningful xs are available)
+  4. Fill out various information below
+  5.
 """
 
-# case name
+# Case Name
 case_name = 'testing123'
 
 # fissionable regions - used for origen later
@@ -42,9 +48,8 @@ relaxation_factor = 0.3 # relaxation factor for stochastic CELI
 include_predictor_in_blender = True # whether we include the predictor nuclide density in stochastic iterations while we relax the number density.
 
 # File Handles - keep as is - only consider changing the addnux dictionary
-addnuxdictbase = 'addnuxDicts/addnux2Dict.dict'
-base_triton = 'triton_base_file/triton_base.inp'
-origen_base = 'origen_base_files/baseOrigenFile.inp'
+addnuxdictnumber = '2' # 0,1,2,3,4 - e.g. '1' for addnux=1 | can also do a path to a custom addnuxdict (advanced)
+base_triton = 'triton_base_file/triton_base.inp' # your base file for triton
 origenResults_F71dir = 'OrigenResults_F71dir'
 MonteCarloResults_F33dir = 'MonteCarloResults_F33'
 scale_version = 624 # 624, 631, etc...
@@ -70,7 +75,7 @@ elif Nprocs == 1:
 else:
   is_parallel = True
 
-import CELI
+from SCALEDepleter.depletion_python_scripts import CELI
 CELI.CELI(fissionable_mats=fissionable_mats,
           fissionable_mats_vols=fissionable_mats_vols,
           residual_number_density=residual_number_density,
@@ -80,9 +85,8 @@ CELI.CELI(fissionable_mats=fissionable_mats,
           specific_power=specific_power,
           steplength_days=steplength_days,
           origen_predictor_divs=origen_predictor_divs,
-          addnuxdictbase=addnuxdictbase,
+          addnuxdictbase=addnuxdictnumber,
           base_triton=base_triton,
-          origen_base=origen_base,
           origenResults_F71dir=origenResults_F71dir,
           MonteCarloResults_F33dir=MonteCarloResults_F33dir,
           Nprocs=Nprocs,
