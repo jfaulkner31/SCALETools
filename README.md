@@ -20,34 +20,34 @@ export PYTHONPATH=<project>/<myCalculation>/SCALEDepleter:$PYTHONPATH
 
 # To install on a system
 
-#### CD into your default directory
+### CD into your default directory
 cd $HOME
 
-#### Clone this repo:
+### Clone this repo:
 git clone https://github.com/jfaulkner31/SCALETools.git
 
-#### Create a new conda env
+### Create a new conda env
 conda create --name scale
 
 conda activate scale
 
-#### Install pip for conda
+### Install pip for conda
 conda install pip
 
-#### Install SCALEDepleter
+### Install SCALEDepleter
 cd SCALETools
 
 pip install .
 
-#### If you want a modifiable version of SCALEDepleter such that changes reflect at runtime:
+### If you want a modifiable version of SCALEDepleter such that changes reflect at runtime:
 pip install -e .
 
-#### Test that it works:
+### Test that it works:
 python
 
 import SCALEDepleter
 
-#### To copy the input file for CELI into a base directory:
+### To copy the input file for CELI into a base directory:
 cd "yourWorkingProjectFolder"
 
 python
