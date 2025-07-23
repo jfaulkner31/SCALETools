@@ -7,5 +7,5 @@ setup(
   install_requires=["numpy>=1.26.4",
                     "pandas>=2.2.2",
                     "mpi4py>=4.0.0",
-                    "matplitlib>=3.10.0"] # add any dependencies here
+                    "matplotlib>=3.10.0"] # add any dependencies here
 )
