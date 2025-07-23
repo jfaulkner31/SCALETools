@@ -48,7 +48,7 @@ python
 import SCALEDepleter
 
 #### To copy the input file for CELI into a base directory:
-cd <yourWorkingProjectFolder>
+cd "yourWorkingProjectFolder"
 
 python
 
