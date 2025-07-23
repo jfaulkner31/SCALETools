@@ -53,7 +53,8 @@ def CELI(fissionable_mats: list,
           relaxation_factor: float,
           case_name: str,
           include_predictor_in_blender: bool,
-          scale_version: int):
+          scale_version: int,
+          scale_kill_pause_time: float):
 
   ##################################################################
   ####################### SANITY CHECKS ############################

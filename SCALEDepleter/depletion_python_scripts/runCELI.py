@@ -53,6 +53,7 @@ base_triton = 'triton_base_file/triton_base.inp' # your base file for triton
 origenResults_F71dir = 'OrigenResults_F71dir'
 MonteCarloResults_F33dir = 'MonteCarloResults_F33'
 scale_version = 624 # 624, 631, etc...
+scale_kill_pause_time = 20 # seoncds to wait before killing scale when running keno calculations (7 for fast systems and more for slower systems - e.g. 20-30)
 
 ##################################################################
 ########################### EXECUTION ############################
@@ -99,4 +100,5 @@ CELI.CELI(fissionable_mats=fissionable_mats,
           relaxation_factor=relaxation_factor,
           case_name=case_name,
           include_predictor_in_blender=include_predictor_in_blender,
-          scale_version=scale_version)
+          scale_version=scale_version,
+          scale_kill_pause_time=scale_kill_pause_time)
