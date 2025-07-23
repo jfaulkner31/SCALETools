@@ -28,11 +28,22 @@ git clone https://github.com/jfaulkner31/SCALETools.git
 
 #### Create a new conda env
 conda create --name scale
+
 conda activate scale
+
+#### Install pip for conda
+conda install pip
 
 #### Install SCALEDepleter
 cd SCALETools
+
 pip install .
 
 #### If you want a modifiable version of SCALEDepleter such that changes reflect at runtime:
 pip install -e .
+
+#### Test that it works:
+python
+
+import SCALEDepleter
+
