@@ -6,16 +6,16 @@ import os
 import shutil
 
 # Depletion imports
-from depletion_python_scripts import getComps
-from depletion_python_scripts import makeStdCmp
-from depletion_python_scripts import runAndKillScale
-from depletion_python_scripts import makeTritonFile
-from depletion_python_scripts import copyMatAndF33Files
-from depletion_python_scripts import makeAndRunOrigen
-from depletion_python_scripts import removeAndMakeDir
-from depletion_python_scripts import powerFromOutput
-from depletion_python_scripts import pickledData
-from depletion_python_scripts import results_data
+from . import getComps
+from . import makeStdCmp
+from . import runAndKillScale
+from . import makeTritonFile
+from . import copyMatAndF33Files
+from . import makeAndRunOrigen
+from . import removeAndMakeDir
+from . import powerFromOutput
+from . import pickledData
+from . import results_data
 
 """
 Runs a CELI predictor/corrector scheme.
@@ -41,7 +41,6 @@ def CELI(fissionable_mats: list,
           origen_predictor_divs: int,
           addnuxdictbase: str,
           base_triton: str,
-          origen_base: str,
           origenResults_F71dir: str,
           MonteCarloResults_F33dir: str,
           Nprocs: int,
@@ -60,23 +59,40 @@ def CELI(fissionable_mats: list,
   ####################### SANITY CHECKS ############################
   ##################################################################
   num_steps = int
+  # NUMBER OF STEPS CHECK
   if len(specific_power) != len(steplength_days):
     raise Exception("Specific power and steplength lengths do not match.")
   else:
     num_steps = len(specific_power)
+  # VOLUMES AND ZONES SANITY CHECK
   if len(fissionable_mats_vols) != len(fissionable_mats):
     raise Exception("Fissionable mat ids and fissionable mat volume lengths do not match.")
+  # NUMBER DENSITY LIMITS
   if residual_number_density <= 1e-24:
     raise Exception("Residual number density cannot be less than 1e-24")
+  # CORRECTOR ITERATIONS LIMITS
   if corrector_iterations <= 0:
     raise Exception("Corrector iterations must be greater than 1")
+  # RELAXATION FACTOR LIMITS
   if (relaxation_factor > 1.0) | (relaxation_factor <=0.0):
     raise Exception("Relaxation factor is bounded (0,1]")
+  # ORIGEN PREDICTOR DIVS
   if (origen_predictor_divs < 2):
     raise Exception("Origen predictor divs must be 2 or more - 2 reccomended since CRAM methodology is being used and CRAM accuracy is not strongly related to timestep size.")
+  # SCALE VERSION
   if (scale_version) not in [631, 632, 624]:
     raise Exception("Scale version number must be and integer: 624, 631, or 632")
+  # ADDNUX HANDLING - UPDATING TO PRESET ADDNUX DICTS BASED ON USER INPUT - OR KEEP USER INPUT FOR COUPLE
+  if (addnuxdictbase == '3') | (addnuxdictbase == '4') | (addnuxdictbase == '1') | (addnuxdictbase == '0') | (addnuxdictbase == '2'):
+    addnuxdictbase = os.path.dirname(__file__) + '/../addnuxDicts/addnux'+addnuxdictbase+'Dict.dict'
+  else:
+    raise Exception("Addnux dict must be: '0' '1' '2' '3' or '4'. Modify ")
 
+  ##################################################################
+  ########################### DEFAULTS #############################
+  ##################################################################
+  # Default variables that we hardcode in this section - not part of the input.
+  origen_base = os.path.dirname(__file__) + '/../origen_base_files/baseOrigenFile.inp'
 
   ##################################################################
   ############################ SETUP ###############################

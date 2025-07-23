@@ -1,10 +1,11 @@
 import numpy as np
-import getComps
 import subprocess
 import time
 import glob
-from getComps import material_normal
-from getComps import material_lib
+
+from . import getComps
+from .getComps import material_normal
+from .getComps import material_lib
 import os
 import shutil
 

@@ -1,11 +1,12 @@
 """
 This folder makes data structures for outputting and manipulating CELI results in python.
 """
-from getComps import material_lib
 import pickle
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+
+from .getComps import material_lib
 
 def open_pkl(filename):
   # opens the CELI pkl file and returns a ResultsCELI object from a completed run

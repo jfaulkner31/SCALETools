@@ -5,7 +5,7 @@ import time
 import os
 import signal
 
-import getComps
+from . import getComps
 
 def runAndKillScale(scale_input_line, scale_input_file_name):
 

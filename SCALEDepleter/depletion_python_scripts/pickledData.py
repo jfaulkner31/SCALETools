@@ -1,5 +1,5 @@
 import pickle
-from getComps import time_dependent_material_lib
+from .getComps import time_dependent_material_lib
 
 def makeOutput(keff_lines: list, power_by_step: dict, specific_power: list, steplength_days: list, time_lib: time_dependent_material_lib, pkl_filename: str):
 

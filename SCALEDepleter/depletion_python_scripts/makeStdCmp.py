@@ -1,5 +1,5 @@
 import subprocess
-from getComps import material_lib
+from .getComps import material_lib
 import shutil
 import os
 
