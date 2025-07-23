@@ -7,7 +7,7 @@ import signal
 
 from . import getComps
 
-def runAndKillScale(scale_input_line, scale_input_file_name):
+def runAndKillScale(scale_input_line, scale_input_file_name, scale_kill_pause_time):
 
   dot = scale_input_file_name.find('.')
   msg_file_name = scale_input_file_name[0:dot]+'.msg'

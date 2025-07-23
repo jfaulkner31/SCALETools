@@ -209,7 +209,7 @@ def CELI(fissionable_mats: list,
     # this part runs MC at BOS - the correct MC solution for the beginning of this step
     # since it comes either from IC nuclide density or a nuclide density converged
     # at the corrector at the previous steps EOS convergence procedure
-    keff_line = runAndKillScale.runAndKillScale(scale_run_line_c, corrected_triton_input)
+    keff_line = runAndKillScale.runAndKillScale(scale_run_line_c, corrected_triton_input, scale_kill_pause_time)
     keff_lines.append(keff_line)
 
     # append results to celi mat lib
@@ -283,7 +283,7 @@ def CELI(fissionable_mats: list,
       mat_lib_this_step = getComps.material_lib()
 
       # now, we have to run eigenvalue calc after depleting - get f33 at T1
-      keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input) # run scale for the 'predicted' triton input
+      keff_line = runAndKillScale.runAndKillScale(scale_run_line_p, predicted_triton_input, scale_kill_pause_time) # run scale for the 'predicted' triton input
       keff_lines.append(keff_line)
 
       # append celi results for datakeeping
